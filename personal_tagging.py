@@ -23,15 +23,11 @@ def get_artist_id(name):
 
 def get_album_id(name, artist_id):
     """Find the ID of an album by its name and its artist ID"""
-    albums_dict = musicbrainzngs.search_releases(name)
+    albums_dict = musicbrainzngs.search_releases(query=name, arid=artist_id)
     for i in range(len(albums_dict["release-list"])):
         if name == albums_dict["release-list"][i]["title"]:
-            for j in range(len(albums_dict["release-list"][i][
-                    "artist-credit"])):
-                if artist_id == albums_dict["release-list"][i][
-                        "artist-credit"][j]["artist"]["id"]:
-                    return albums_dict["release-list"][i]["id"]
-    raise ValueError("Album %s not literally found with artist %s" % (
+            return albums_dict["release-list"][i]["id"]
+    raise ValueError("Album %s not literally found from artist %s" % (
         name, musicbrainzngs.get_artist_by_id(artist_id)["artist"]["name"]))
 
 
