@@ -3,10 +3,14 @@
 """An automatic audio metadata tagger with my own ideas of a well organised
 library using Mutagen & MusicBrainz.
 """ 
+
 import musicbrainzngs
 import re
 import urllib.request
 import os
+import base64
+from mutagen.oggvorbis import OggVorbis
+from mutagen.flac import Picture
 from PIL import Image
 
 # Developing only, but I do not want to look it up every time I need it
@@ -43,23 +47,23 @@ def get_taggable_information(album_id):
     album_dict = musicbrainzngs.get_release_by_id(id=album_id,
                                                   includes="recordings")
     image_dict = musicbrainzngs.get_image_list(album_id)
-    output_dict = {}
+    taggable_information = {}
 
-    output_dict["year"] = re.sub(r"([0-9]{4})(-[0-9]{2}){2}",
-                                 r"\1",
-                                 album_dict["release"]["date"])
+    taggable_information["year"] = re.sub(r"([0-9]{4})(-[0-9]{2}){2}",
+                                          r"\1",
+                                          album_dict["release"]["date"])
 
     result_track_list = album_dict["release"]["medium-list"][0]["track-list"]
     sorted(result_track_list, key=lambda song: song["position"])
-    output_dict["tracks"] = []
+    taggable_information["tracks"] = []
     for song in result_track_list:
-        output_dict["tracks"].append(song["recording"]["title"])
+        taggable_information["tracks"].append(song["recording"]["title"])
 
     for image in image_dict["images"]:
         if "Front" in image["types"]:
-            output_dict["image_url"] = image["image"]
+            taggable_information["image_url"] = image["image"]
 
-    return output_dict
+    return taggable_information
 
 
 def get_cover_image(image_url):
@@ -74,6 +78,39 @@ def get_cover_image(image_url):
     filename = re.sub(r"(.*)\.jpg", r"\1.png", filename)
     cover_img.save(filename)
     return filename
+
+
+def tag(filename, artist_name, album_name, taggable_information):
+    """Tag a file with given information, taggable_information is from
+    get_taggable_information.
+    """
+    new_filename = re.sub(r"([0-9]{2}).*", r"\1.ogg", filename)
+    os.rename(filename, new_filename)
+    filename = new_filename
+    track_number = re.match(r"[0-9]{2}", filename).group()
+    title = taggable_information["tracks"][int(track_number) - 1]
+
+    audio = OggVorbis(filename)
+    audio["tracknumber"] = track_number
+    audio["title"] = title
+    audio["album"] = album_name
+    audio["artist"] = artist_name
+    audio["date"] = taggable_information["year"]
+
+    cover_file = get_cover_image(taggable_information["image_url"])
+    with open(cover_file, "rb") as cover:
+        data = cover.read()
+    picture = Picture()
+    picture.data = data
+    picture_data = picture.write()
+    encoded_data = base64.b64encode(picture_data)
+    vcomment_value = encoded_data.decode("ascii")
+    audio["metadata_block_picture"] = [vcomment_value]
+
+    audio.save()
+
+    new_filename = track_number + " " + title + ".ogg"
+    os.rename(filename, new_filename)
 
 
 def main():
