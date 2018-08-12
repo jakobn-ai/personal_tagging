@@ -15,25 +15,40 @@ import musicbrainzngs
 def get_artist_id(name):
     """Find the ID of an artist by their name"""
     artists_dict = musicbrainzngs.search_artists(name)
-    for i in range(len(artists_dict["artist-list"])):
-        if name == artists_dict["artist-list"][i]["name"]:
-            return artists_dict["artist-list"][i]["id"]
+    for artist in artists_dict["artist-list"]:
+        if name == artist["name"]:
+            return artist["id"]
     raise ValueError("Artist %s not literally found" % name)
 
 
 def get_album_id(name, artist_id):
     """Find the ID of an album by its name and its artist ID"""
     albums_dict = musicbrainzngs.search_releases(query=name, arid=artist_id)
-    for i in range(len(albums_dict["release-list"])):
-        if name == albums_dict["release-list"][i]["title"]:
-            return albums_dict["release-list"][i]["id"]
+    for album in albums_dict["release-list"]:
+        if name == album["title"]:
+            return album["id"]
     raise ValueError("Album %s not literally found from artist %s" % (
         name, musicbrainzngs.get_artist_by_id(artist_id)["artist"]["name"]))
 
 
+def get_song_list(album_id):
+    """Find the songs of an album by its ID"""
+    album_dict = musicbrainzngs.get_release_by_id(id=album_id,
+                                                  includes="recordings")
+    result_track_list = album_dict["release"]["medium-list"][0]["track-list"]
+    sorted(result_track_list, key=lambda song: song["position"])
+    output_track_list = []
+    for song in result_track_list:
+        output_track_list.append(song["recording"]["title"])
+    return output_track_list
+
+
 def main():
     """Set a user agent (mandatory)"""
-    musicbrainzngs.set_useragent("personal_tagging", 0.1)
+    musicbrainzngs.set_useragent("personal_tagging",
+                                 0.1,
+                                 "https://github.com/jakobn-ai/"
+                                 "personal_tagging")
 
 
 if __name__ == "__main__":
