@@ -4,6 +4,7 @@
 library using Mutagen & MusicBrainz.
 """ 
 
+import sys
 import musicbrainzngs
 import re
 import urllib.request
@@ -23,7 +24,7 @@ def get_artist_id(name):
     """Find the ID of an artist by their name."""
     artists_dict = musicbrainzngs.search_artists(name)
     for artist in artists_dict["artist-list"]:
-        if name == artist["name"]:
+        if name == artist["name"]: # TODO - character
             return artist["id"]
     raise ValueError("Artist %s not literally found" % name)
 
@@ -53,6 +54,7 @@ def get_taggable_information(album_id):
                                           r"\1",
                                           album_dict["release"]["date"])
 
+    # TODO multi-disc albums
     result_track_list = album_dict["release"]["medium-list"][0]["track-list"]
     sorted(result_track_list, key=lambda song: song["position"])
     taggable_information["tracks"] = []
@@ -80,24 +82,23 @@ def get_cover_image(image_url):
     return filename
 
 
-def tag(filename, artist_name, album_name, taggable_information):
+def tag(filename, artist_name, album_name, release_year, track_list, cover_file):
     """Tag a file with given information, taggable_information is from
     get_taggable_information.
     """
-    new_filename = re.sub(r"([0-9]{2}).*", r"\1.ogg", filename)
+    new_filename = re.sub(r"([^/]*)/([^/]*)/([0-9]{2}).*", r"\1/\2/\3.ogg", filename)
     os.rename(filename, new_filename)
     filename = new_filename
-    track_number = re.match(r"[0-9]{2}", filename).group()
-    title = taggable_information["tracks"][int(track_number) - 1]
+    track_number = re.match(r"[^/]*/[^/]*/([0-9]{2})\.ogg", filename).group(1)
+    title = track_list[int(track_number) - 1]
 
     audio = OggVorbis(filename)
     audio["tracknumber"] = track_number
     audio["title"] = title
     audio["album"] = album_name
     audio["artist"] = artist_name
-    audio["date"] = taggable_information["year"]
+    audio["date"] = release_year
 
-    cover_file = get_cover_image(taggable_information["image_url"])
     with open(cover_file, "rb") as cover:
         data = cover.read()
     picture = Picture()
@@ -109,16 +110,29 @@ def tag(filename, artist_name, album_name, taggable_information):
 
     audio.save()
 
-    new_filename = track_number + " " + title + ".ogg"
+    new_filename = re.sub(r"([^/]*/[^/]*/[0-9]{2})\.ogg", r"\1", filename)
+    new_filename = new_filename + " " + title + ".ogg"
     os.rename(filename, new_filename)
 
 
 def main():
-    """Set a user agent (mandatory)"""
+    """Operate on files in an album directory in an artist directory"""
     musicbrainzngs.set_useragent("personal_tagging",
                                  0.1,
                                  "https://github.com/jakobn-ai/"
                                  "personal_tagging")
+    match = re.match(r"([^/]*)/([^/]*)", sys.argv[1])
+    artist, album = match.group(1), match.group(2)
+    artist_id = get_artist_id(artist)
+    album_id = get_album_id(album, artist_id, artist)
+    taggable_information = get_taggable_information(album_id)
+    release_year = taggable_information["year"]
+    track_list = taggable_information["tracks"]
+    cover_file = get_cover_image(taggable_information["image_url"])
+    for subdir, dirs, files in os.walk(artist + "/" + album):
+        for filename in files:
+            tag(artist + "/" + album + "/" + filename, artist, album, release_year, track_list, cover_file)
+    os.remove(cover_file)
 
 
 if __name__ == "__main__":
