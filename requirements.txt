@@ -1,2 +1,3 @@
 mutagen>=1.41.0 # GPL-2.0
 musicbrainzngs>=0.6 # BSD
+Pillow>=5.2.0 # PIL Software License
