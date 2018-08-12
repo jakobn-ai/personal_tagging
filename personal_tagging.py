@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 """An automatic audio metadata tagger with my own ideas of a well organised
- library using Mutagen & MusicBrainz.
- """
+library using Mutagen & MusicBrainz.
+"""
 
 import musicbrainzngs
 import re
@@ -48,6 +48,14 @@ def get_song_information(album_id):
     for song in result_track_list:
         output_dict["tracks"].append(song["recording"]["title"])
     return output_dict
+
+
+def get_cover_url(album_id):
+    """Find the coverartarchive.org URL of an album by its ID"""
+    image_dict = musicbrainzngs.get_image_list(album_id)
+    for image in image_dict["images"]:
+        if "Front" in image["types"]:
+            return image["image"]
 
 
 def main():
