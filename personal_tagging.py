@@ -2,14 +2,15 @@
 
 """An automatic audio metadata tagger with my own ideas of a well organised
 library using Mutagen & MusicBrainz.
-""" 
+"""
 
-import sys
-import musicbrainzngs
 import re
-import urllib.request
 import os
+import sys
+import urllib.request
 import base64
+
+import musicbrainzngs
 from mutagen.oggvorbis import OggVorbis
 from mutagen.flac import Picture
 from PIL import Image
@@ -20,11 +21,19 @@ from PIL import Image
 # pp.pprint(something)
 
 
+def setup():
+    """Set up a user agent (mandatory)"""
+    musicbrainzngs.set_useragent("personal_tagging",
+                                 0.1,
+                                 "https://github.com/jakobn-ai/"
+                                 "personal_tagging")
+
+
 def get_artist_id(name):
     """Find the ID of an artist by their name."""
     artists_dict = musicbrainzngs.search_artists(name)
     for artist in artists_dict["artist-list"]:
-        if name == artist["name"]: # TODO - character
+        if name == artist["name"]:
             return artist["id"]
     raise ValueError("Artist %s not literally found" % name)
 
@@ -75,18 +84,26 @@ def get_cover_image(image_url):
     cover_img = Image.open(filename)
     width, height = cover_img.size
     scalefactor = 600/max(width, height)
-    cover_img = cover_img.resize((int(width*scalefactor), int(height*scalefactor)))
+    cover_img = cover_img.resize((int(width*scalefactor),
+                                  int(height*scalefactor)))
     os.remove(filename)
     filename = re.sub(r"(.*)\.jpg", r"\1.png", filename)
     cover_img.save(filename)
     return filename
 
 
-def tag(filename, artist_name, album_name, release_year, track_list, cover_file):
+def tag(filename,
+        artist_name,
+        album_name,
+        release_year,
+        track_list,
+        cover_file):
     """Tag a file with given information, taggable_information is from
     get_taggable_information.
     """
-    new_filename = re.sub(r"([^/]*)/([^/]*)/([0-9]{2}).*", r"\1/\2/\3.ogg", filename)
+    new_filename = re.sub(r"([^/]*)/([^/]*)/([0-9]{2}).*",
+                          r"\1/\2/\3.ogg",
+                          filename)
     os.rename(filename, new_filename)
     filename = new_filename
     track_number = re.match(r"[^/]*/[^/]*/([0-9]{2})\.ogg", filename).group(1)
@@ -117,13 +134,9 @@ def tag(filename, artist_name, album_name, release_year, track_list, cover_file)
 
 def main():
     """Operate on files in an album directory in an artist directory"""
-    musicbrainzngs.set_useragent("personal_tagging",
-                                 0.1,
-                                 "https://github.com/jakobn-ai/"
-                                 "personal_tagging")
     match = re.match(r"([^/]*)/([^/]*)", sys.argv[1])
     artist, album = match.group(1), match.group(2)
-    artist_id = get_artist_id(artist)
+    artist_id = get_artist_id(artist)  # TODO - character, catch network
     album_id = get_album_id(album, artist_id, artist)
     taggable_information = get_taggable_information(album_id)
     release_year = taggable_information["year"]
@@ -131,7 +144,12 @@ def main():
     cover_file = get_cover_image(taggable_information["image_url"])
     for subdir, dirs, files in os.walk(artist + "/" + album):
         for filename in files:
-            tag(artist + "/" + album + "/" + filename, artist, album, release_year, track_list, cover_file)
+            tag(artist + "/" + album + "/" + filename,
+                artist,
+                album,
+                release_year,
+                track_list,
+                cover_file)
     os.remove(cover_file)
 
 
