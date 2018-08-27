@@ -3,6 +3,9 @@
 """Tests for the personal_tagging project"""
 
 import unittest
+import os
+import musicbrainzngs
+from PIL import Image
 import personal_tagging
 
 
@@ -134,6 +137,25 @@ class TestGetTaggableInformation(TestGetTaggableInformationAux):
                                                               "38b0f8169814"))
         self.assertNotEqual(self.expected_information,
                             self.taggable_information)
+
+
+class TestGetCoverImage(unittest.TestCase):
+    """Tests get_cover_image"""
+
+    def test_normal_input(self):
+        """Tests with normal input"""
+        personal_tagging.setup()
+        self.imagefile = (personal_tagging.
+                          get_cover_image(personal_tagging.
+                                          get_taggable_information("3fca59cc-"
+                                                                   "a22f-4a57-"
+                                                                   "8d69-05bf3"
+                                                                   "3595ca6")
+                                          ["image_url"]))
+        self.img = Image.open(self.imagefile)
+        self.assertEqual(max(self.img.size), 600)
+        self.assertRegex(self.imagefile, r".*\.png")
+        os.remove(self.imagefile)
 
 
 if __name__ == '__main__':
