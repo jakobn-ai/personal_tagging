@@ -138,6 +138,13 @@ class TestGetTaggableInformation(TestGetTaggableInformationAux):
         self.assertNotEqual(self.expected_information,
                             self.taggable_information)
 
+    def test_404(self):
+        """Tests 404 upon searching the image for an album without a cover"""
+        personal_tagging.setup()
+        with self.assertRaises(musicbrainzngs.musicbrainz.ResponseError):
+            personal_tagging.get_taggable_information("06c015bb-b3bb-4904-a339"
+                                                      "-e2b55ea3d6bf")
+
 
 class TestGetCoverImage(unittest.TestCase):
     """Tests get_cover_image"""
