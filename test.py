@@ -15,16 +15,14 @@ class TestGetArtistID(unittest.TestCase):
     def test_normal_input(self):
         """Test with normal input"""
         personal_tagging.setup()
-        self.test_id = personal_tagging.get_artist_id("MusicBrainz Test "
-                                                      "Artist")
-        self.assertEqual(self.test_id, "7e84f845-ac16-41fe-9ff8-df12eb32af55")
+        test_id = personal_tagging.get_artist_id("MusicBrainz Test Artist")
+        self.assertEqual(test_id, "7e84f845-ac16-41fe-9ff8-df12eb32af55")
 
     def test_sanity(self):
         """Sanity check: Does it yield different IDs for different queries?"""
         personal_tagging.setup()
-        self.test_id = personal_tagging.get_artist_id("The Beatles")
-        self.assertNotEqual(self.test_id, "7e84f845-ac16-41fe-9ff8-"
-                            "df12eb32af55")
+        test_id = personal_tagging.get_artist_id("The Beatles")
+        self.assertNotEqual(test_id, "7e84f845-ac16-41fe-9ff8-df12eb32af55")
 
     def test_value_error(self):
         """Test value error: Find an artist that does not exist"""
@@ -42,21 +40,20 @@ class TestGetAlbumID(unittest.TestCase):
     def test_normal_input(self):
         """Test with normal input"""
         personal_tagging.setup()
-        self.test_id = personal_tagging.get_album_id("Pregap and Data Tracks",
-                                                     "7e84f845-ac16-41fe-9ff8-"
-                                                     "df12eb32af55",
-                                                     "MusicBrainz Test Artist")
-        self.assertEqual(self.test_id, "06c015bb-b3bb-4904-a339-e2b55ea3d6bf")
+        test_id = personal_tagging.get_album_id("Pregap and Data Tracks",
+                                                 "7e84f845-ac16-41fe-9ff8-"
+                                                 "df12eb32af55",
+                                                 "MusicBrainz Test Artist")
+        self.assertEqual(test_id, "06c015bb-b3bb-4904-a339-e2b55ea3d6bf")
 
     def test_sanity(self):
         """Sanity check: Does it yield different IDs for different queries?"""
         personal_tagging.setup()
-        self.test_id = personal_tagging.get_album_id("The Beatles",
-                                                     "b10bbbfc-cf9e-42e0-be17-"
-                                                     "e2c3e1d2600d",
-                                                     "The Beatles")
-        self.assertNotEqual(self.test_id, "06c015bb-b3bb-4904-a339-"
-                            "e2b55ea3d6bf")
+        test_id = personal_tagging.get_album_id("The Beatles",
+                                                 "b10bbbfc-cf9e-42e0-be17-"
+                                                 "e2c3e1d2600d",
+                                                 "The Beatles")
+        self.assertNotEqual(test_id, "06c015bb-b3bb-4904-a339-e2b55ea3d6bf")
 
     def test_value_error(self):
         """Test value error: Find an album that does not exist"""
@@ -119,11 +116,10 @@ class TestGetTaggableInformation(TestGetTaggableInformationAux):
     def test_normal_input(self):
         """Tests with normal input"""
         personal_tagging.setup()
-        self.taggable_information = (personal_tagging.
-                                     get_taggable_information("3fca59cc-a22f-"
-                                                              "4a57-8d69-"
-                                                              "05bf33595ca6"))
-        self.assertEqual(self.expected_information, self.taggable_information)
+        taggable_information = (personal_tagging.
+                                get_taggable_information("3fca59cc-a22f-4a57-"
+                                                         "8d69-05bf33595ca6"))
+        self.assertEqual(self.expected_information, taggable_information)
 
     def test_sanity(self):
         """Sanity check: Does it yield different information for different
@@ -131,12 +127,10 @@ class TestGetTaggableInformation(TestGetTaggableInformationAux):
         """
         personal_tagging.setup()
         # Please Please Me because MusicBrainz Test Artist has no cover
-        self.taggable_information = (personal_tagging.
-                                     get_taggable_information("ade577f6-6087-"
-                                                              "4a4f-8e87-"
-                                                              "38b0f8169814"))
-        self.assertNotEqual(self.expected_information,
-                            self.taggable_information)
+        taggable_information = (personal_tagging.
+                                get_taggable_information("ade577f6-6087-4a4f-"
+                                                         "8e87-38b0f8169814"))
+        self.assertNotEqual(self.expected_information, taggable_information)
 
     def test_404(self):
         """Tests 404 upon searching the image for an album without a cover"""
@@ -152,17 +146,16 @@ class TestGetCoverImage(unittest.TestCase):
     def test_normal_input(self):
         """Tests with normal input"""
         personal_tagging.setup()
-        self.imagefile = (personal_tagging.
-                          get_cover_image(personal_tagging.
-                                          get_taggable_information("3fca59cc-"
-                                                                   "a22f-4a57-"
-                                                                   "8d69-05bf3"
-                                                                   "3595ca6")
-                                          ["image_url"]))
-        self.img = Image.open(self.imagefile)
-        self.assertEqual(max(self.img.size), 600)
-        self.assertRegex(self.imagefile, r".*\.png")
-        os.remove(self.imagefile)
+        imagefile = (personal_tagging.
+                     get_cover_image(personal_tagging.
+                                     get_taggable_information("3fca59cc-a22f-"
+                                                              "4a57-8d69-"
+                                                              "05bf33595ca6")
+                                     ["image_url"]))
+        img = Image.open(imagefile)
+        self.assertEqual(max(img.size), 600)
+        self.assertRegex(imagefile, r".*\.png")
+        os.remove(imagefile)
 
 
 if __name__ == '__main__':
