@@ -102,12 +102,14 @@ def tag(filename,
     """Tag a file with given information, latter three arguments are from
     get_taggable_information.
     """
+    # Remove filename except number (if it exists)
     new_filename = re.sub(r"([^/]*)/([^/]*)/([0-9]{2}).*",
                           r"\1/\2/\3.ogg",
                           filename)
     os.rename(filename, new_filename)
     filename = new_filename
     track_number = re.match(r"[^/]*/[^/]*/([0-9]{2})\.ogg", filename).group(1)
+    # List index starts at 0
     title = track_list[int(track_number) - 1]
 
     audio = OggVorbis(filename)
@@ -117,6 +119,7 @@ def tag(filename,
     audio["artist"] = artist_name
     audio["date"] = release_year
 
+    # Encode cover image
     with open(cover_file, "rb") as cover:
         data = cover.read()
     picture = Picture()
@@ -128,6 +131,7 @@ def tag(filename,
 
     audio.save()
 
+    # Insert title into filename
     new_filename = re.sub(r"([^/]*/[^/]*/[0-9]{2})\.ogg", r"\1", filename)
     new_filename = new_filename + " " + title + ".ogg"
     os.rename(filename, new_filename)
