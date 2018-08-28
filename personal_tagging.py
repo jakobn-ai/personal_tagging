@@ -99,7 +99,7 @@ def tag(filename,
         release_year,
         track_list,
         cover_file):
-    """Tag a file with given information, taggable_information is from
+    """Tag a file with given information, latter three arguments are from
     get_taggable_information.
     """
     new_filename = re.sub(r"([^/]*)/([^/]*)/([0-9]{2}).*",
