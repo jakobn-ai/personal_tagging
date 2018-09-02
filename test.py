@@ -4,7 +4,9 @@
 
 import unittest
 import os
+import shutil
 import musicbrainzngs
+import mutagen
 from PIL import Image
 import personal_tagging
 
@@ -41,18 +43,18 @@ class TestGetAlbumID(unittest.TestCase):
         """Test with normal input"""
         personal_tagging.setup()
         test_id = personal_tagging.get_album_id("Pregap and Data Tracks",
-                                                 "7e84f845-ac16-41fe-9ff8-"
-                                                 "df12eb32af55",
-                                                 "MusicBrainz Test Artist")
+                                                "7e84f845-ac16-41fe-9ff8-"
+                                                "df12eb32af55",
+                                                "MusicBrainz Test Artist")
         self.assertEqual(test_id, "06c015bb-b3bb-4904-a339-e2b55ea3d6bf")
 
     def test_sanity(self):
         """Sanity check: Does it yield different IDs for different queries?"""
         personal_tagging.setup()
         test_id = personal_tagging.get_album_id("The Beatles",
-                                                 "b10bbbfc-cf9e-42e0-be17-"
-                                                 "e2c3e1d2600d",
-                                                 "The Beatles")
+                                                "b10bbbfc-cf9e-42e0-be17-"
+                                                "e2c3e1d2600d",
+                                                "The Beatles")
         self.assertNotEqual(test_id, "06c015bb-b3bb-4904-a339-e2b55ea3d6bf")
 
     def test_value_error(self):
@@ -68,7 +70,7 @@ class TestGetAlbumID(unittest.TestCase):
                                           "MusicBrainz Test Artist")
 
 
-class TestGetTaggableInformationAux(unittest.TestCase):
+class AuxInformation(unittest.TestCase):
     """Save this across multiple tests"""
     tracklist = ["Back in the U.S.S.R.",
                  "Dear Prudence",
@@ -110,7 +112,7 @@ class TestGetTaggableInformationAux(unittest.TestCase):
     expected_information["image_url"] = url
 
 
-class TestGetTaggableInformation(TestGetTaggableInformationAux):
+class TestGetTaggableInformation(AuxInformation):
     """Tests get_taggable_information"""
 
     def test_normal_input(self):
@@ -156,6 +158,40 @@ class TestGetCoverImage(unittest.TestCase):
         self.assertEqual(max(img.size), 600)
         self.assertRegex(imagefile, r".*\.png")
         os.remove(imagefile)
+
+
+class TestTag(AuxInformation):
+    """Tests tag"""
+
+    def test_normal_input(self):
+        """Tests with normal input"""
+        personal_tagging.setup()
+        imagefile = (personal_tagging.
+                     get_cover_image(personal_tagging.
+                                     get_taggable_information("3fca59cc-a22f-"
+                                                              "4a57-8d69-"
+                                                              "05bf33595ca6")
+                                     ["image_url"]))
+        os.mkdir("The Beatles")
+        os.mkdir("The Beatles/The Beatles")
+        filename = "The Beatles/The Beatles/01 Back In The U.S.S.R..ogg"
+        shutil.copyfile("testfile.ogg", filename)
+        personal_tagging.tag(filename,
+                             "The Beatles",
+                             "The Beatles",
+                             self.expected_information["year"],
+                             self.expected_information["tracks"],
+                             imagefile)
+        tags_dict = mutagen.File(filename)
+        self.assertEqual(tags_dict["artist"][0], "The Beatles")
+        self.assertEqual(tags_dict["album"][0], "The Beatles")
+        self.assertEqual(tags_dict["tracknumber"][0], "01")
+        self.assertEqual(tags_dict["title"][0], "Back in the U.S.S.R.")
+        self.assertEqual(tags_dict["date"][0], "2000")
+        # TODO add cover binary to external file?
+        os.remove(imagefile)
+        shutil.rmtree("The Beatles")
+        # TODO switch to shutil entirely
 
 
 if __name__ == '__main__':
