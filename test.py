@@ -172,10 +172,10 @@ class TestTag(AuxInformation):
                                                               "4a57-8d69-"
                                                               "05bf33595ca6")
                                      ["image_url"]))
-        os.mkdir("The Beatles")
-        os.mkdir("The Beatles/The Beatles")
+        os.mkdir("./The Beatles")
+        os.mkdir("./The Beatles/The Beatles")
         filename = "The Beatles/The Beatles/01 Back In The U.S.S.R..ogg"
-        shutil.copyfile("testfile.ogg", filename)
+        shutil.copyfile("testfile.ogg", "./" + filename)
         personal_tagging.tag(filename,
                              "The Beatles",
                              "The Beatles",
@@ -190,7 +190,7 @@ class TestTag(AuxInformation):
         self.assertEqual(tags_dict["date"][0], "2000")
         # TODO add cover binary to external file?
         os.remove(imagefile)
-        shutil.rmtree("The Beatles")
+        shutil.rmtree("./The Beatles")
         # TODO switch to shutil entirely
 
 
