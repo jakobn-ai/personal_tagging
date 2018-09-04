@@ -103,12 +103,12 @@ def tag(filename,
     get_taggable_information.
     """
     # Remove filename except number (if it exists)
-    new_filename = re.sub(r"(.*)/([0-9]{2})[^/]*",
-                          r"\1/\2.ogg",
+    new_filename = re.sub(r"(.*)([0-9]{2})[^/]*",
+                          r"\1\2.ogg",
                           filename)
     os.rename(filename, new_filename)
     filename = new_filename
-    track_number = re.match(r".*/([0-9]{2})\.ogg", filename).group(1)
+    track_number = re.match(r".*([0-9]{2})\.ogg", filename).group(1)
     # List index starts at 0
     title = track_list[int(track_number) - 1]
 
@@ -132,7 +132,7 @@ def tag(filename,
     audio.save()
 
     # Insert title into filename
-    new_filename = re.sub(r"(.*/[0-9]{2})\.ogg", r"\1", filename)
+    new_filename = re.sub(r"(.*)\.ogg", r"\1", filename)
     new_filename = new_filename + " " + title + ".ogg"
     os.rename(filename, new_filename)
 

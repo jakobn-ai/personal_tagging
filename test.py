@@ -165,16 +165,14 @@ class TestTag(AuxInformation):
 
     def test_normal_input(self):
         """Tests with normal input"""
-        personal_tagging.setup()
         imagefile = (personal_tagging.
                      get_cover_image(personal_tagging.
                                      get_taggable_information("3fca59cc-a22f-"
                                                               "4a57-8d69-"
                                                               "05bf33595ca6")
                                      ["image_url"]))
-        os.mkdir("/tmp/The Beatles")
-        os.mkdir("/tmp/The Beatles/The Beatles")
-        filename = "/tmp/The Beatles/The Beatles/01 Back In The U.S.S.R..ogg"
+
+        filename = "01 Back in the U.S.S.R..ogg"
         shutil.copyfile("testfile.ogg", filename)
         personal_tagging.tag(filename,
                              "The Beatles",
@@ -189,9 +187,8 @@ class TestTag(AuxInformation):
         self.assertEqual(tags_dict["title"][0], "Back in the U.S.S.R.")
         self.assertEqual(tags_dict["date"][0], "2000")
         # TODO add cover binary to external file?
+        os.remove(filename)
         os.remove(imagefile)
-        shutil.rmtree("/tmp/The Beatles")
-        # TODO switch to shutil entirely
 
 
 if __name__ == '__main__':
