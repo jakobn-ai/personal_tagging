@@ -9,6 +9,7 @@ import musicbrainzngs
 import mutagen
 from PIL import Image
 import personal_tagging
+import aux_information
 
 
 class TestGetArtistID(unittest.TestCase):
@@ -70,49 +71,7 @@ class TestGetAlbumID(unittest.TestCase):
                                           "MusicBrainz Test Artist")
 
 
-class AuxInformation(unittest.TestCase):
-    """Save this across multiple tests"""
-    tracklist = ["Back in the U.S.S.R.",
-                 "Dear Prudence",
-                 "Glass Onion",
-                 "Ob‐La‐Di, Ob‐La‐Da",
-                 "Wild Honey Pie",
-                 "The Continuing Story of Bungalow Bill",
-                 "While My Guitar Gently Weeps",
-                 "Happiness Is a Warm Gun",
-                 "Martha My Dear",
-                 "I’m So Tired",
-                 "Blackbird",
-                 "Piggies",
-                 "Rocky Raccoon",
-                 "Don’t Pass Me By",
-                 "Why Don’t We Do It in the Road?",
-                 "I Will",
-                 "Julia",
-                 "Birthday",
-                 "Yer Blues",
-                 "Mother Nature’s Son",
-                 "Everybody’s Got Something to Hide Except Me and "
-                 "My Monkey",
-                 "Sexy Sadie",
-                 "Helter Skelter",
-                 "Long, Long, Long",
-                 "Revolution 1",
-                 "Honey Pie",
-                 "Savoy Truffle",
-                 "Cry Baby Cry, Part 1",
-                 "Cry Baby Cry, Part 2",
-                 "Revolution 9",
-                 "Good Night"]
-    url = ("http://coverartarchive.org/release/3fca59cc-a22f-4a57-"
-           "8d69-05bf33595ca6/12447401370.jpg")
-    expected_information = {}
-    expected_information["year"] = "2000"
-    expected_information["tracks"] = tracklist
-    expected_information["image_url"] = url
-
-
-class TestGetTaggableInformation(AuxInformation):
+class TestGetTaggableInformation(unittest.TestCase):
     """Tests get_taggable_information"""
 
     def test_normal_input(self):
@@ -121,7 +80,8 @@ class TestGetTaggableInformation(AuxInformation):
         taggable_information = (personal_tagging.
                                 get_taggable_information("3fca59cc-a22f-4a57-"
                                                          "8d69-05bf33595ca6"))
-        self.assertEqual(self.expected_information, taggable_information)
+        self.assertEqual(aux_information.expected_information,
+                         taggable_information)
 
     def test_sanity(self):
         """Sanity check: Does it yield different information for different
@@ -132,7 +92,8 @@ class TestGetTaggableInformation(AuxInformation):
         taggable_information = (personal_tagging.
                                 get_taggable_information("ade577f6-6087-4a4f-"
                                                          "8e87-38b0f8169814"))
-        self.assertNotEqual(self.expected_information, taggable_information)
+        self.assertNotEqual(aux_information.expected_information,
+                            taggable_information)
 
     def test_404(self):
         """Tests 404 upon searching the image for an album without a cover"""
@@ -160,7 +121,7 @@ class TestGetCoverImage(unittest.TestCase):
         os.remove(imagefile)
 
 
-class TestTag(AuxInformation):
+class TestTag(unittest.TestCase):
     """Tests tag"""
 
     def test_normal_input(self):
@@ -177,8 +138,8 @@ class TestTag(AuxInformation):
         personal_tagging.tag(filename,
                              "The Beatles",
                              "The Beatles",
-                             self.expected_information["year"],
-                             self.expected_information["tracks"],
+                             aux_information.expected_information["year"],
+                             aux_information.expected_information["tracks"],
                              imagefile)
         tags_dict = mutagen.File(filename)
         self.assertEqual(tags_dict["artist"][0], "The Beatles")
