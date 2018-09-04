@@ -158,5 +158,19 @@ def main():
     os.remove(cover_file)
 
 
+# TODO Target features
+# Wildcards -> proper CLI tool
+# "Expanded" albums (personal bonus tracks)
+# Replacements (capitalisation, ', my preferred spelling of Rock'n'Roll)
+# Pt., Pts.
+# OST, Podcast/audiobook, classical music
+# Earliest release date, latest cover (presumably in best quality)
+# Track & album information like live recording, feature
+# Suites like Atom Heart Mother [Father's Shout/etc.]
+# Custom album name like The Beatles -> The Beatles (White Album)
+# Auto-tag singles from the song without folder structure
+# Add artist name with common album names like Greatest Hits
+
+
 if __name__ == "__main__":
     main()
