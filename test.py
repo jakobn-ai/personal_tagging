@@ -147,7 +147,8 @@ class TestTag(unittest.TestCase):
         self.assertEqual(tags_dict["tracknumber"][0], "01")
         self.assertEqual(tags_dict["title"][0], "Back in the U.S.S.R.")
         self.assertEqual(tags_dict["date"][0], "2000")
-        # TODO add cover binary to external file?
+        self.assertEqual(tags_dict["metadata_block_picture"][0],
+                         aux_information.cover_data)
         os.remove(filename)
         os.remove(imagefile)
 
