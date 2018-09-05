@@ -8,6 +8,7 @@ import re
 import os
 import sys
 import urllib.request
+import urllib.error
 import base64
 
 import musicbrainzngs
@@ -141,12 +142,17 @@ def main():
     """Operate on files in an album directory in an artist directory"""
     match = re.match(r"([^/]*)/([^/]*)", sys.argv[1])
     artist, album = match.group(1), match.group(2)
-    artist_id = get_artist_id(artist)  # TODO - character, catch network
-    album_id = get_album_id(album, artist_id, artist)
-    taggable_information = get_taggable_information(album_id)
+    setup()
+    # TODO - character
+    try:
+        artist_id = get_artist_id(artist)
+        album_id = get_album_id(album, artist_id, artist)
+        taggable_information = get_taggable_information(album_id)
+        cover_file = get_cover_image(taggable_information["image_url"])
+    except musicbrainzngs.musicbrainz.NetworkError:
+        raise urllib.error.URLError("Could not connect to MusicBrainz")
     release_year = taggable_information["year"]
     track_list = taggable_information["tracks"]
-    cover_file = get_cover_image(taggable_information["image_url"])
     for subdir, dirs, files in os.walk(artist + "/" + album):
         for filename in files:
             tag(artist + "/" + album + "/" + filename,
