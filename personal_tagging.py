@@ -166,6 +166,7 @@ def main():
 
 # TODO Target features
 # Wildcards -> proper CLI tool
+# FLAC support
 # "Expanded" albums (personal bonus tracks)
 # Replacements (capitalisation, ', my preferred spelling of Rock'n'Roll)
 # Pt., Pts.
