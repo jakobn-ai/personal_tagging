@@ -134,7 +134,7 @@ class TestTag(unittest.TestCase):
                                      ["image_url"]))
 
         filename = "01 Back in the U.S.S.R..ogg"
-        shutil.copyfile("testfile.ogg", filename)
+        shutil.copyfile("testartist/testalbum/testfile.ogg", filename)
         personal_tagging.tag(filename,
                              "The Beatles",
                              "The Beatles",
