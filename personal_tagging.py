@@ -138,34 +138,60 @@ def tag(filename,
     os.rename(filename, new_filename)
 
 
+def get_files(directory):
+    """Get all relevant files and output an artist-album-filename dict"""
+    output_dict = {}
+    for root, dirs, files in os.walk(directory):
+        for filename in files:
+            if filename.endswith(".ogg"):
+                filename = os.path.join(root, filename)
+                match = re.match(r".*/([^/]*)/([^/]*)/[^/]*", filename)
+                artist, album = match.group(1), match.group(2)
+                if artist not in output_dict:
+                    output_dict[artist] = {}
+                    output_dict[artist]["albums"] = {}
+                if album not in output_dict[artist]:
+                    output_dict[artist]["albums"][album] = {}
+                    output_dict[artist]["albums"][album]["tracks"] = []
+                output_dict[artist]["albums"][album]["tracks"] += [filename]
+    return output_dict
+
+
 def main():
     """Operate on files in an album directory in an artist directory"""
-    match = re.match(r"([^/]*)/([^/]*)", sys.argv[1])
-    artist, album = match.group(1), match.group(2)
+    files = get_files(sys.argv[1])
     setup()
-    # TODO - character
     try:
-        artist_id = get_artist_id(artist)
-        album_id = get_album_id(album, artist_id, artist)
-        taggable_information = get_taggable_information(album_id)
-        cover_file = get_cover_image(taggable_information["image_url"])
+        for artist in files:
+            files[artist]["artist_id"] = get_artist_id(artist)
+            for album in files[artist]["albums"]:
+                files[artist]["albums"][album]["album_id"] = get_album_id(
+                    album, files[artist]["artist_id"], artist)
+                files[artist]["albums"][album]["taggable_information"] = (
+                    get_taggable_information(files[artist]["albums"][album]
+                                                  ["album_id"]))
+                files[artist]["albums"][album]["cover_file"] = (
+                    get_cover_image(files[artist]["albums"][album]
+                                         ["taggable_information"]
+                                         ["image_url"]))
+                for track in files[artist]["albums"][album]["tracks"]:
+                    tag(track,
+                        artist,
+                        album,
+                        files[artist]["albums"][album]["taggable_information"]
+                        ["year"],
+                        files[artist]["albums"][album]["taggable_information"]
+                        ["tracks"],
+                        files[artist]["albums"][album]["cover_file"])
+                os.remove(files[artist]["albums"][album]["cover_file"])
     except musicbrainzngs.musicbrainz.NetworkError:
         raise urllib.error.URLError("Could not connect to MusicBrainz")
-    release_year = taggable_information["year"]
-    track_list = taggable_information["tracks"]
-    for subdir, dirs, files in os.walk(artist + "/" + album):
-        for filename in files:
-            tag(artist + "/" + album + "/" + filename,
-                artist,
-                album,
-                release_year,
-                track_list,
-                cover_file)
-    os.remove(cover_file)
 
 
 # TODO Target features
-# Wildcards -> proper CLI tool
+# - character
+# Catch bad directories
+# Catch read and write errors (also cover file)
 # FLAC support
 # "Expanded" albums (personal bonus tracks)
 # Replacements (capitalisation, ', my preferred spelling of Rock'n'Roll)

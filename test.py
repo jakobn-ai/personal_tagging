@@ -134,7 +134,8 @@ class TestTag(unittest.TestCase):
                                      ["image_url"]))
 
         filename = "01 Back in the U.S.S.R..ogg"
-        shutil.copyfile("testartist/testalbum/testfile.ogg", filename)
+        shutil.copyfile("testlibrary/testartist/testalbum/testfile.ogg",
+                        filename)
         personal_tagging.tag(filename,
                              "The Beatles",
                              "The Beatles",
@@ -151,6 +152,20 @@ class TestTag(unittest.TestCase):
                          aux_information.cover_data)
         os.remove(filename)
         os.remove(imagefile)
+
+
+class TestGetFiles(unittest.TestCase):
+    """Tests get_files"""
+
+    def test_normal_input(self):
+        """Tests with normal input"""
+        files_dict = personal_tagging.get_files("testlibrary")
+        self.assertEqual(list(files_dict), ["testartist"])
+        self.assertEqual(list(files_dict["testartist"]["albums"]),
+                         ["testalbum"])
+        self.assertRegex(files_dict["testartist"]["albums"]["testalbum"]
+                                   ["tracks"][0],
+                         "testlibrary/testartist/testalbum/testfile\.ogg")
 
 
 if __name__ == '__main__':
