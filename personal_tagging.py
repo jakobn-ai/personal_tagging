@@ -86,8 +86,8 @@ def get_cover_image(image_url):
     cover_img = Image.open(filename)
     width, height = cover_img.size
     scalefactor = 600/max(width, height)
-    cover_img = cover_img.resize((int(width*scalefactor),
-                                  int(height*scalefactor)))
+    cover_img = cover_img.resize((int(width * scalefactor),
+                                  int(height * scalefactor)))
     os.remove(filename)
     filename = re.sub(r"(.*)\.jpg", r"\1.png", filename)
     cover_img.save(filename)
@@ -140,6 +140,8 @@ def tag(filename,
 
 def get_files(directory):
     """Get all relevant files and output an artist-album-filename dict"""
+    if not os.path.isdir(directory):
+        raise ValueError("Directory ./" + directory + " does not exist")
     output_dict = {}
     for root, dirs, files in os.walk(directory):
         for filename in files:
@@ -190,8 +192,8 @@ def main():
 
 # TODO Target features
 # - character
-# Catch bad directories
 # Catch read and write errors (also cover file)
+# Catch not OGG (or FLAC)
 # FLAC support
 # "Expanded" albums (personal bonus tracks)
 # Replacements (capitalisation, ', my preferred spelling of Rock'n'Roll)

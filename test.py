@@ -167,6 +167,11 @@ class TestGetFiles(unittest.TestCase):
                                    ["tracks"][0],
                          "testlibrary/testartist/testalbum/testfile\.ogg")
 
+    def test_missing_dir(self):
+        """Tests with a directory that doesn't exist"""
+        with self.assertRaises(ValueError):
+            files_dict = personal_tagging.get_files("library")  # noqa: F841
+
 
 if __name__ == '__main__':
     unittest.main()
