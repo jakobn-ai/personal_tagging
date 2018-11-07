@@ -76,6 +76,8 @@ class TestGetTaggableInformation(unittest.TestCase):
 
     def test_normal_input(self):
         """Tests with normal input"""
+        self.maxDiff = None
+
         personal_tagging.setup()
         taggable_information = (personal_tagging.
                                 get_taggable_information("3fca59cc-a22f-4a57-"
@@ -125,32 +127,33 @@ class TestTag(unittest.TestCase):
     """Tests tag"""
 
     def test_normal_input(self):
-        """Tests with normal input"""
+        personal_tagging.setup()
         imagefile = (personal_tagging.
                      get_cover_image(personal_tagging.
                                      get_taggable_information("3fca59cc-a22f-"
                                                               "4a57-8d69-"
                                                               "05bf33595ca6")
                                      ["image_url"]))
-
-        filename = "01 Back in the U.S.S.R..ogg"
-        shutil.copyfile("testlibrary/testartist/testalbum/testfile.ogg",
-                        filename)
-        personal_tagging.tag(filename,
-                             "The Beatles",
-                             "The Beatles",
-                             aux_information.expected_information["year"],
-                             aux_information.expected_information["tracks"],
-                             imagefile)
-        tags_dict = mutagen.File(filename)
-        self.assertEqual(tags_dict["artist"][0], "The Beatles")
-        self.assertEqual(tags_dict["album"][0], "The Beatles")
-        self.assertEqual(tags_dict["tracknumber"][0], "01")
-        self.assertEqual(tags_dict["title"][0], "Back in the U.S.S.R.")
-        self.assertEqual(tags_dict["date"][0], "2000")
-        self.assertEqual(tags_dict["metadata_block_picture"][0],
-                         aux_information.cover_data)
-        os.remove(filename)
+        for extension in ("ogg", "flac"):
+            filename = "01 Back in the U.S.S.R.." + extension
+            shutil.copyfile("testlibrary/testartist/testalbum/testfile." +
+                            extension, filename)
+            personal_tagging.tag(filename,
+                                 "The Beatles",
+                                 "The Beatles",
+                                 aux_information.expected_information["year"],
+                                 aux_information.expected_information["tra"
+                                                                      "cks"],
+                                 imagefile)
+            tags_dict = mutagen.File(filename)
+            self.assertEqual(tags_dict["artist"][0], "The Beatles")
+            self.assertEqual(tags_dict["album"][0], "The Beatles")
+            self.assertEqual(tags_dict["tracknumber"][0], "01")
+            self.assertEqual(tags_dict["title"][0], "Back in the U.S.S.R.")
+            self.assertEqual(tags_dict["date"][0], "2000")
+            self.assertEqual(tags_dict["metadata_block_picture"][0],
+                             aux_information.cover_data)
+            os.remove(filename)
         os.remove(imagefile)
 
 
@@ -163,9 +166,10 @@ class TestGetFiles(unittest.TestCase):
         self.assertEqual(list(files_dict), ["testartist"])
         self.assertEqual(list(files_dict["testartist"]["albums"]),
                          ["testalbum"])
-        self.assertRegex(files_dict["testartist"]["albums"]["testalbum"]
-                                   ["tracks"][0],
-                         "testlibrary/testartist/testalbum/testfile\.ogg")
+        self.assertEqual(sorted(files_dict["testartist"]["albums"]["testalbum"]
+                         ["tracks"]),
+                         ["testlibrary/testartist/testalbum/testfile.flac",
+                          "testlibrary/testartist/testalbum/testfile.ogg"])
 
     def test_missing_dir(self):
         """Tests with a directory that doesn't exist"""

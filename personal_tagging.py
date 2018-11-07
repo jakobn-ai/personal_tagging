@@ -13,7 +13,7 @@ import base64
 
 import musicbrainzngs
 from mutagen.oggvorbis import OggVorbis
-from mutagen.flac import Picture
+from mutagen.flac import FLAC, Picture
 from PIL import Image
 
 # Developing only, but I do not want to look it up every time I need it
@@ -51,6 +51,19 @@ def get_album_id(name, artist_id, artist_name):
                      (name, artist_name))
 
 
+def custom_replace(title):
+    """Make custom spelling replacements to the title"""
+    title = re.sub(r"-", "-", title)  # Hyphen to ASCII
+    title = re.sub(r"’", "'", title)  # Typesetting apostrophe to ASCII
+    # Rock'n'Roll, Guns'n'Roses etc.
+    title = re.sub(r"(\S+)( |'| ')(n|N)( |'|' )(\S+)", r"\1'n'\5", title)
+    # Capitalise each word
+    title.join(word.capitalize() for word in title.split())
+    for keyword in ("In", "Of", "The", "To", "And", "At", "A", "An"):
+        title = re.sub(r" " + keyword, " " + keyword.lower(), title)
+    return title
+
+
 def get_taggable_information(album_id):
     """Find the songs, release year, and coverartarchive.org URL of an album
     by its ID.
@@ -70,7 +83,8 @@ def get_taggable_information(album_id):
     for disc in discs:
         sorted(disc["track-list"], key=lambda song: song["position"])
         for song in disc["track-list"]:
-            taggable_information["tracks"].append(song["recording"]["title"])
+            taggable_information["tracks"].append(custom_replace(song[
+                "recording"]["title"]))
 
     for image in image_dict["images"]:
         if "Front" in image["types"]:
@@ -104,16 +118,18 @@ def tag(filename,
     get_taggable_information.
     """
     # Remove filename except number (if it exists)
-    new_filename = re.sub(r"(.*)([0-9]{2})[^/]*",
-                          r"\1\2.ogg",
-                          filename)
+    format_extension = re.sub(r".*(\.[^\.]*)", r"\1", filename)
+    new_filename = re.sub(r"(.*)([0-9]{2})[^/]*", r"\1\2", filename)
     os.rename(filename, new_filename)
     filename = new_filename
-    track_number = re.match(r".*([0-9]{2})\.ogg", filename).group(1)
+    track_number = re.match(r".*([0-9]{2})", filename).group(1)
     # List index starts at 0
     title = track_list[int(track_number) - 1]
 
-    audio = OggVorbis(filename)
+    if format_extension == ".ogg":
+        audio = OggVorbis(filename)
+    else:
+        audio = FLAC(filename)
     audio["tracknumber"] = track_number
     audio["title"] = title
     audio["album"] = album_name
@@ -131,11 +147,7 @@ def tag(filename,
     audio["metadata_block_picture"] = [vcomment_value]
 
     audio.save()
-
-    # Insert title into filename
-    new_filename = re.sub(r"(.*)\.ogg", r"\1", filename)
-    new_filename = new_filename + " " + title + ".ogg"
-    os.rename(filename, new_filename)
+    os.rename(filename, filename + " " + title + format_extension)
 
 
 def get_files(directory):
@@ -145,14 +157,14 @@ def get_files(directory):
     output_dict = {}
     for root, dirs, files in os.walk(directory):
         for filename in files:
-            if filename.endswith(".ogg"):
+            if filename.endswith(".ogg") or filename.endswith(".flac"):
                 filename = os.path.join(root, filename)
                 match = re.match(r".*/([^/]*)/([^/]*)/[^/]*", filename)
                 artist, album = match.group(1), match.group(2)
                 if artist not in output_dict:
                     output_dict[artist] = {}
                     output_dict[artist]["albums"] = {}
-                if album not in output_dict[artist]:
+                if album not in output_dict[artist]["albums"]:
                     output_dict[artist]["albums"][album] = {}
                     output_dict[artist]["albums"][album]["tracks"] = []
                 output_dict[artist]["albums"][album]["tracks"] += [filename]
@@ -191,15 +203,11 @@ def main():
 
 
 # TODO Target features
-# - character
 # Catch read and write errors (also cover file)
-# Catch not OGG (or FLAC)
-# FLAC support
+# Earliest release date, latest cover (presumably in best quality)
 # "Expanded" albums (personal bonus tracks)
-# Replacements (capitalisation, ', my preferred spelling of Rock'n'Roll)
 # Pt., Pts.
 # OST, Podcast/audiobook, classical music
-# Earliest release date, latest cover (presumably in best quality)
 # Track & album information like live recording, feature
 # Suites like Atom Heart Mother [Father's Shout/etc.]
 # Custom album name like The Beatles -> The Beatles (White Album)
