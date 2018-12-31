@@ -12,6 +12,7 @@ import urllib.error
 import base64
 
 import musicbrainzngs
+import mutagen
 from mutagen.oggvorbis import OggVorbis
 from mutagen.flac import FLAC, Picture
 from PIL import Image
@@ -124,7 +125,11 @@ def tag(filename,
     # Remove filename except number (if it exists)
     format_extension = re.sub(r".*(\.[^\.]*)", r"\1", filename)
     new_filename = re.sub(r"(.*)([0-9]{2})[^/]*", r"\1\2", filename)
-    os.rename(filename, new_filename)
+    try:
+        os.rename(filename, new_filename)
+    except PermissionError:
+        raise PermissionError("Could not write to directory. Please run on "
+                              "directories you have write permissions to.")
     filename = new_filename
     track_number = re.match(r".*([0-9]{2})", filename).group(1)
     # List index starts at 0
@@ -150,7 +155,11 @@ def tag(filename,
     vcomment_value = encoded_data.decode("ascii")
     audio["metadata_block_picture"] = [vcomment_value]
 
-    audio.save()
+    try:
+        audio.save()
+    except mutagen.MutagenError:
+        raise PermissionError("Could not write to song. Please run on songs "
+                              "you have write permissions to.")
     os.rename(filename, filename + " " + title + format_extension)
 
 
@@ -207,7 +216,7 @@ def main():
 
 
 # TODO Target features
-# Catch read and write errors
+# Catch read errors
 # Earliest release date, latest cover (presumably in best quality)
 # "Expanded" albums (personal bonus tracks)
 # Pt., Pts.

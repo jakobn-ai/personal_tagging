@@ -125,11 +125,11 @@ class TestGetCoverImage(unittest.TestCase):
 
     def test_permission_error(self):
         """Tests with missing write access"""
+        personal_tagging.setup()
         original_perms = os.stat(".").st_mode
         # Revoke write permissions
         os.chmod(".", original_perms & ~stat.S_IWUSR)
         with self.assertRaises(PermissionError):
-            personal_tagging.setup()
             (personal_tagging.
              get_cover_image(personal_tagging.
                              get_taggable_information("3fca59cc-a22f-4a57-8d69"
@@ -170,6 +170,47 @@ class TestTag(unittest.TestCase):
             self.assertEqual(tags_dict["metadata_block_picture"][0],
                              aux_information.cover_data)
             os.remove(filename)
+        os.remove(imagefile)
+
+    def test_permission_errors(self):
+        """Tests with missing write access"""
+        personal_tagging.setup()
+        imagefile = (personal_tagging.
+                     get_cover_image(personal_tagging.
+                                     get_taggable_information("3fca59cc-a22f-"
+                                                              "4a57-8d69-"
+                                                              "05bf33595ca6")
+                                     ["image_url"]))
+        filename = "01 Back in the U.S.S.R..ogg"
+        shutil.copyfile("testlibrary/testartist/testalbum/testfile.ogg",
+                        filename)
+        original_perms = os.stat(".").st_mode
+        # Revoke write permissions on directory
+        os.chmod(".", original_perms & ~stat.S_IWUSR)
+        with self.assertRaises(PermissionError):
+            personal_tagging.tag(filename,
+                                 "The Beatles",
+                                 "The Beatles",
+                                 aux_information.expected_information["year"],
+                                 aux_information.expected_information["tra"
+                                                                      "cks"],
+                                 imagefile)
+        os.chmod(".", original_perms)
+
+        original_perms = os.stat(filename).st_mode
+        # Revoke write permissions on song
+        os.chmod(filename, os.stat(filename).st_mode & ~stat.S_IWUSR)
+        with self.assertRaises(PermissionError):
+            personal_tagging.tag(filename,
+                                 "The Beatles",
+                                 "The Beatles",
+                                 aux_information.expected_information["year"],
+                                 aux_information.expected_information["tra"
+                                                                      "cks"],
+                                 imagefile)
+        os.chmod("01", original_perms)
+
+        os.remove("01")
         os.remove(imagefile)
 
 
