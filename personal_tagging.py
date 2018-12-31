@@ -96,7 +96,11 @@ def get_taggable_information(album_id):
 def get_cover_image(image_url):
     """Get and scale an image from the URL."""
     filename = re.sub(r"(.*/)*(.*)", r"\2", image_url)
-    urllib.request.urlretrieve(image_url, filename)
+    try:
+        urllib.request.urlretrieve(image_url, filename)
+    except PermissionError:
+        raise PermissionError("Could not write image. Please execute from a "
+                              "directory where you have write permissions.")
     cover_img = Image.open(filename)
     width, height = cover_img.size
     scalefactor = 600/max(width, height)
@@ -203,7 +207,7 @@ def main():
 
 
 # TODO Target features
-# Catch read and write errors (also cover file)
+# Catch read and write errors
 # Earliest release date, latest cover (presumably in best quality)
 # "Expanded" albums (personal bonus tracks)
 # Pt., Pts.

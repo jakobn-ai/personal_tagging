@@ -4,6 +4,7 @@
 
 import unittest
 import os
+import stat
 import shutil
 import musicbrainzngs
 import mutagen
@@ -122,11 +123,26 @@ class TestGetCoverImage(unittest.TestCase):
         self.assertRegex(imagefile, r".*\.png")
         os.remove(imagefile)
 
+    def test_permission_error(self):
+        """Tests with missing write access"""
+        original_perms = os.stat(".").st_mode
+        # Revoke write permissions
+        os.chmod(".", original_perms & ~stat.S_IWUSR)
+        with self.assertRaises(PermissionError):
+            personal_tagging.setup()
+            (personal_tagging.
+             get_cover_image(personal_tagging.
+                             get_taggable_information("3fca59cc-a22f-4a57-8d69"
+                                                      "-05bf33595ca6")
+                             ["image_url"]))
+        os.chmod(".", original_perms)
+
 
 class TestTag(unittest.TestCase):
     """Tests tag"""
 
     def test_normal_input(self):
+        """Tests with normal input"""
         personal_tagging.setup()
         imagefile = (personal_tagging.
                      get_cover_image(personal_tagging.
@@ -174,7 +190,7 @@ class TestGetFiles(unittest.TestCase):
     def test_missing_dir(self):
         """Tests with a directory that doesn't exist"""
         with self.assertRaises(ValueError):
-            files_dict = personal_tagging.get_files("library")  # noqa: F841
+            personal_tagging.get_files("library")
 
 
 if __name__ == '__main__':
