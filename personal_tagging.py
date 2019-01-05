@@ -65,6 +65,7 @@ def custom_replace(title):
     title.join(word.capitalize() for word in title.split())
     for keyword in ("In", "Of", "The", "To", "And", "At", "A", "An"):
         title = re.sub(r" " + keyword, " " + keyword.lower(), title)
+    title = re.sub(r"(.*)Part(s|)(\W*)", r"\1Pt\2.\3", title)  # Pt./Pts.
     return title
 
 
@@ -220,7 +221,6 @@ def main():
 
 # TODO Target features
 # "Expanded" albums (personal bonus tracks)
-# Pt., Pts.
 # OST, Podcast/audiobook, classical music
 # Track & album information like live recording, feature
 # Suites like Atom Heart Mother [Father's Shout/etc.]

@@ -29,8 +29,8 @@ tracklist = ["Back in the U.S.S.R.",
              "Revolution 1",
              "Honey Pie",
              "Savoy Truffle",
-             "Cry Baby Cry, Part 1",
-             "Cry Baby Cry, Part 2",
+             "Cry Baby Cry, Pt. 1",
+             "Cry Baby Cry, Pt. 2",
              "Revolution 9",
              "Good Night"]
 url = ("http://coverartarchive.org/release/3fca59cc-a22f-4a57-8d69-"
