@@ -33,8 +33,8 @@ def setup():
 
 def get_artist_id(name):
     """Find the ID of an artist by their name."""
-    artists_dict = musicbrainzngs.search_artists(name)
-    for artist in artists_dict["artist-list"]:
+    artists = musicbrainzngs.search_artists(name)["artist-list"]
+    for artist in artists:
         if name == artist["name"]:
             return artist["id"]
     raise ValueError("Artist %s not literally found" % name)
@@ -44,12 +44,15 @@ def get_album_id(name, artist_id, artist_name):
     """Find the ID of an album by its name and its artist ID.
     Artist name is for error output.
     """
-    albums_dict = musicbrainzngs.search_releases(query=name, arid=artist_id)
-    for album in albums_dict["release-list"]:
-        if name == album["title"]:
-            return album["id"]
-    raise ValueError("Album %s not literally found from artist %s" %
-                     (name, artist_name))
+    albums_list = (musicbrainzngs.
+                   search_releases(query=name, arid=artist_id)["release-list"])
+    albums_list = [album for album in albums_list
+                   if name == album["title"] and "date" in album]
+    if albums_list == []:
+        raise ValueError("Album %s not literally found from artist %s" %
+                         (name, artist_name))
+    sorted(albums_list, key=lambda album: album["date"])
+    return(albums_list[0]["id"], albums_list[len(albums_list) - 1]["id"])
 
 
 def custom_replace(title):
@@ -65,13 +68,13 @@ def custom_replace(title):
     return title
 
 
-def get_taggable_information(album_id):
+def get_taggable_information(album_ids):
     """Find the songs, release year, and coverartarchive.org URL of an album
     by its ID.
     """
-    album_dict = musicbrainzngs.get_release_by_id(id=album_id,
+    album_dict = musicbrainzngs.get_release_by_id(id=album_ids[0],
                                                   includes="recordings")
-    image_dict = musicbrainzngs.get_image_list(album_id)
+    image_dict = musicbrainzngs.get_image_list(album_ids[1])
     taggable_information = {}
 
     taggable_information["year"] = re.sub(r"([0-9]{4})(-[0-9]{2}){2}",
@@ -192,11 +195,11 @@ def main():
         for artist in files:
             files[artist]["artist_id"] = get_artist_id(artist)
             for album in files[artist]["albums"]:
-                files[artist]["albums"][album]["album_id"] = get_album_id(
+                files[artist]["albums"][album]["album_ids"] = get_album_id(
                     album, files[artist]["artist_id"], artist)
                 files[artist]["albums"][album]["taggable_information"] = (
                     get_taggable_information(files[artist]["albums"][album]
-                                                  ["album_id"]))
+                                                  ["album_ids"]))
                 files[artist]["albums"][album]["cover_file"] = (
                     get_cover_image(files[artist]["albums"][album]
                                          ["taggable_information"]
@@ -216,8 +219,6 @@ def main():
 
 
 # TODO Target features
-# Catch read errors
-# Earliest release date, latest cover (presumably in best quality)
 # "Expanded" albums (personal bonus tracks)
 # Pt., Pts.
 # OST, Podcast/audiobook, classical music

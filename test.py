@@ -48,7 +48,8 @@ class TestGetAlbumID(unittest.TestCase):
                                                 "7e84f845-ac16-41fe-9ff8-"
                                                 "df12eb32af55",
                                                 "MusicBrainz Test Artist")
-        self.assertEqual(test_id, "06c015bb-b3bb-4904-a339-e2b55ea3d6bf")
+        expected_string = "06c015bb-b3bb-4904-a339-e2b55ea3d6bf"
+        self.assertEqual(test_id, (expected_string, expected_string))
 
     def test_sanity(self):
         """Sanity check: Does it yield different IDs for different queries?"""
@@ -57,7 +58,8 @@ class TestGetAlbumID(unittest.TestCase):
                                                 "b10bbbfc-cf9e-42e0-be17-"
                                                 "e2c3e1d2600d",
                                                 "The Beatles")
-        self.assertNotEqual(test_id, "06c015bb-b3bb-4904-a339-e2b55ea3d6bf")
+        expected_string = "06c015bb-b3bb-4904-a339-e2b55ea3d6bf"
+        self.assertNotEqual(test_id, (expected_string, expected_string))
 
     def test_value_error(self):
         """Test value error: Find an album that does not exist"""
@@ -80,9 +82,9 @@ class TestGetTaggableInformation(unittest.TestCase):
         self.maxDiff = None
 
         personal_tagging.setup()
+        query_id = "3fca59cc-a22f-4a57-8d69-05bf33595ca6"
         taggable_information = (personal_tagging.
-                                get_taggable_information("3fca59cc-a22f-4a57-"
-                                                         "8d69-05bf33595ca6"))
+                                get_taggable_information((query_id, query_id)))
         self.assertEqual(aux_information.expected_information,
                          taggable_information)
 
@@ -92,18 +94,18 @@ class TestGetTaggableInformation(unittest.TestCase):
         """
         personal_tagging.setup()
         # Please Please Me because MusicBrainz Test Artist has no cover
+        query_id = "ade577f6-6087-4a4f-8e87-38b0f8169814"
         taggable_information = (personal_tagging.
-                                get_taggable_information("ade577f6-6087-4a4f-"
-                                                         "8e87-38b0f8169814"))
+                                get_taggable_information((query_id, query_id)))
         self.assertNotEqual(aux_information.expected_information,
                             taggable_information)
 
     def test_404(self):
         """Tests 404 upon searching the image for an album without a cover"""
         personal_tagging.setup()
+        query_id = "06c015bb-b3bb-4904-a339-e2b55ea3d6bf"
         with self.assertRaises(musicbrainzngs.musicbrainz.ResponseError):
-            personal_tagging.get_taggable_information("06c015bb-b3bb-4904-a339"
-                                                      "-e2b55ea3d6bf")
+            personal_tagging.get_taggable_information((query_id, query_id))
 
 
 class TestGetCoverImage(unittest.TestCase):
@@ -112,12 +114,11 @@ class TestGetCoverImage(unittest.TestCase):
     def test_normal_input(self):
         """Tests with normal input"""
         personal_tagging.setup()
-        imagefile = (personal_tagging.
-                     get_cover_image(personal_tagging.
-                                     get_taggable_information("3fca59cc-a22f-"
-                                                              "4a57-8d69-"
-                                                              "05bf33595ca6")
-                                     ["image_url"]))
+        query_id = "3fca59cc-a22f-4a57-8d69-05bf33595ca6"
+        image_url = (personal_tagging.
+                     get_taggable_information((query_id, query_id))
+                     ["image_url"])
+        imagefile = personal_tagging.get_cover_image(image_url)
         img = Image.open(imagefile)
         self.assertEqual(max(img.size), 600)
         self.assertRegex(imagefile, r".*\.png")
@@ -129,12 +130,12 @@ class TestGetCoverImage(unittest.TestCase):
         original_perms = os.stat(".").st_mode
         # Revoke write permissions
         os.chmod(".", original_perms & ~stat.S_IWUSR)
+        query_id = "3fca59cc-a22f-4a57-8d69-05bf33595ca6"
+        image_url = (personal_tagging.
+                     get_taggable_information((query_id, query_id))
+                     ["image_url"])
         with self.assertRaises(PermissionError):
-            (personal_tagging.
-             get_cover_image(personal_tagging.
-                             get_taggable_information("3fca59cc-a22f-4a57-8d69"
-                                                      "-05bf33595ca6")
-                             ["image_url"]))
+            personal_tagging.get_cover_image(image_url)
         os.chmod(".", original_perms)
 
 
@@ -144,12 +145,11 @@ class TestTag(unittest.TestCase):
     def test_normal_input(self):
         """Tests with normal input"""
         personal_tagging.setup()
-        imagefile = (personal_tagging.
-                     get_cover_image(personal_tagging.
-                                     get_taggable_information("3fca59cc-a22f-"
-                                                              "4a57-8d69-"
-                                                              "05bf33595ca6")
-                                     ["image_url"]))
+        query_id = "3fca59cc-a22f-4a57-8d69-05bf33595ca6"
+        image_url = (personal_tagging.
+                     get_taggable_information((query_id, query_id))
+                     ["image_url"])
+        imagefile = personal_tagging.get_cover_image(image_url)
         for extension in ("ogg", "flac"):
             filename = "01 Back in the U.S.S.R.." + extension
             shutil.copyfile("testlibrary/testartist/testalbum/testfile." +
@@ -175,12 +175,11 @@ class TestTag(unittest.TestCase):
     def test_permission_errors(self):
         """Tests with missing write access"""
         personal_tagging.setup()
-        imagefile = (personal_tagging.
-                     get_cover_image(personal_tagging.
-                                     get_taggable_information("3fca59cc-a22f-"
-                                                              "4a57-8d69-"
-                                                              "05bf33595ca6")
-                                     ["image_url"]))
+        query_id = "3fca59cc-a22f-4a57-8d69-05bf33595ca6"
+        image_url = (personal_tagging.
+                     get_taggable_information((query_id, query_id))
+                     ["image_url"])
+        imagefile = personal_tagging.get_cover_image(image_url)
         filename = "01 Back in the U.S.S.R..ogg"
         shutil.copyfile("testlibrary/testartist/testalbum/testfile.ogg",
                         filename)
