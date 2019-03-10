@@ -12,9 +12,11 @@ import urllib.error
 import base64
 
 import musicbrainzngs
-import mutagen
-from mutagen.oggvorbis import OggVorbis
-from mutagen.flac import FLAC, Picture
+# import mutagen
+# from mutagen.oggvorbis import OggVorbis
+# from mutagen.flac import FLAC, Picture
+import mutagen.oggvorbis
+import mutagen.flac
 from PIL import Image
 
 # Developing only, but I do not want to look it up every time I need it
@@ -153,9 +155,15 @@ def tag(filename,
     title = track_list[int(track_number) - 1]
 
     if format_extension == ".ogg":
-        audio = OggVorbis(filename)
+        try:
+            audio = mutagen.oggvorbis.OggVorbis(filename)
+        except mutagen.oggvorbis.OggVorbisHeaderError:
+            raise ValueError("%s is not an OGG Vorbis file" % (filename))
     else:
-        audio = FLAC(filename)
+        try:
+            audio = mutagen.flac.FLAC(filename)
+        except mutagen.flac.error:
+            raise ValueError("%s is not a FLAC file" % (filename))
     audio["tracknumber"] = track_number
     audio["title"] = title
     audio["album"] = album_name
@@ -165,7 +173,7 @@ def tag(filename,
     # Encode cover image
     with open(cover_file, "rb") as cover:
         data = cover.read()
-    picture = Picture()
+    picture = mutagen.flac.Picture()
     picture.data = data
     picture_data = picture.write()
     encoded_data = base64.b64encode(picture_data)
@@ -235,6 +243,7 @@ def main():
 
 # TODO Target features
 # Test case that better represents features (like a Greatest Hits album)
+# Catch unexpected title
 # "Expanded" albums (personal bonus tracks)
 # OST, Podcast/audiobook, classical music
 # Track & album information like live recording, feature

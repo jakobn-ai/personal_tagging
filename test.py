@@ -212,6 +212,29 @@ class TestTag(unittest.TestCase):
         os.remove("01")
         os.remove(imagefile)
 
+    def test_not_given_format(self):
+        """Tests with files that aren't the given format"""
+        personal_tagging.setup()
+        query_id = "3fca59cc-a22f-4a57-8d69-05bf33595ca6"
+        image_url = (personal_tagging.
+                     get_taggable_information((query_id, query_id))
+                     ["image_url"])
+        imagefile = personal_tagging.get_cover_image(image_url)
+        for extension in (".ogg", ".flac"):
+            filename = "01" + extension
+            open(filename, "w").close()
+            with self.assertRaises(ValueError):
+                personal_tagging.tag(filename,
+                                     "The Beatles",
+                                     "The Beatles",
+                                     aux_information.
+                                     expected_information["year"],
+                                     aux_information.
+                                     expected_information["tracks"],
+                                     imagefile)
+            os.remove("01")
+        os.remove(imagefile)
+
 
 class TestGetFiles(unittest.TestCase):
     """Tests get_files"""
