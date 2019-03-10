@@ -55,7 +55,7 @@ def get_album_id(name, artist_id, artist_name):
     return(albums_list[0]["id"], albums_list[len(albums_list) - 1]["id"])
 
 
-def custom_replace(title):
+def custom_replace_title(title):
     """Make custom spelling replacements to the title"""
     title = re.sub(r"-", "-", title)  # Hyphen to ASCII
     title = re.sub(r"’", "'", title)  # Typesetting apostrophe to ASCII
@@ -67,6 +67,19 @@ def custom_replace(title):
         title = re.sub(r" " + keyword, " " + keyword.lower(), title)
     title = re.sub(r"(.*)Part(s|)(\W*)", r"\1Pt\2.\3", title)  # Pt./Pts.
     return title
+
+
+def custom_replace_album(artist, album):
+    """Make custom spelling replacements to the album"""
+    # contains artist name already?
+    if re.match(r".*" + artist + r".*", album):
+        return album
+    keywords = ("best", "classic", "collection", "definitive", "essential",
+                "greatest", "live", "hits", "singles", "ultimate")
+    for keyword in keywords:
+        if re.match(r".*" + keyword + r".*", album, re.IGNORECASE):
+            return album + " (" + artist + ")"
+    return album
 
 
 def get_taggable_information(album_ids):
@@ -88,7 +101,7 @@ def get_taggable_information(album_ids):
     for disc in discs:
         sorted(disc["track-list"], key=lambda song: song["position"])
         for song in disc["track-list"]:
-            taggable_information["tracks"].append(custom_replace(song[
+            taggable_information["tracks"].append(custom_replace_title(song[
                 "recording"]["title"]))
 
     for image in image_dict["images"]:
@@ -196,6 +209,7 @@ def main():
         for artist in files:
             files[artist]["artist_id"] = get_artist_id(artist)
             for album in files[artist]["albums"]:
+                album_name = custom_replace_album(artist, album)
                 files[artist]["albums"][album]["album_ids"] = get_album_id(
                     album, files[artist]["artist_id"], artist)
                 files[artist]["albums"][album]["taggable_information"] = (
@@ -208,7 +222,7 @@ def main():
                 for track in files[artist]["albums"][album]["tracks"]:
                     tag(track,
                         artist,
-                        album,
+                        album_name,
                         files[artist]["albums"][album]["taggable_information"]
                         ["year"],
                         files[artist]["albums"][album]["taggable_information"]
@@ -220,13 +234,13 @@ def main():
 
 
 # TODO Target features
+# Test case that better represents features (like a Greatest Hits album)
 # "Expanded" albums (personal bonus tracks)
 # OST, Podcast/audiobook, classical music
 # Track & album information like live recording, feature
 # Suites like Atom Heart Mother [Father's Shout/etc.]
 # Custom album name like The Beatles -> The Beatles (White Album)
 # Auto-tag singles from the song without folder structure
-# Add artist name with common album names like Greatest Hits
 
 
 if __name__ == "__main__":
