@@ -4,20 +4,19 @@
 library using Mutagen & MusicBrainz.
 """
 
-import re
-import os
-import sys
-import urllib.request
-import urllib.error
 import base64
+import os
+import os.path
+import re
+import sys
+import urllib.error
+import urllib.request
+import urllib.parse
 
 import musicbrainzngs
-# import mutagen
-# from mutagen.oggvorbis import OggVorbis
-# from mutagen.flac import FLAC, Picture
-import mutagen.oggvorbis
 import mutagen.flac
-from PIL import Image
+import mutagen.oggvorbis
+import PIL.Image
 
 # Developing only, but I do not want to look it up every time I need it
 # import pprint
@@ -27,46 +26,44 @@ from PIL import Image
 
 def setup():
     """Set up a user agent (mandatory)"""
-    musicbrainzngs.set_useragent("personal_tagging",
-                                 0.1,
+    musicbrainzngs.set_useragent("personal_tagging", 0.1,
                                  "https://github.com/jakobn-ai/"
                                  "personal_tagging")
 
 
 def get_artist_id(name):
     """Find the ID of an artist by their name."""
-    artists = musicbrainzngs.search_artists(name)["artist-list"]
-    for artist in artists:
-        if name == artist["name"]:
-            return artist["id"]
-    raise ValueError("Artist %s not literally found" % name)
+    try:
+        return next(filter(lambda a: a["name"] == name, musicbrainzngs.
+                           search_artists(name)["artist-list"]))["id"]
+    except StopIteration:
+        raise ValueError(f"Artist {name} not literally found")
 
 
-def get_album_id(name, artist_id, artist_name):
-    """Find the ID of an album by its name and its artist ID.
+def get_album_ids(name, artist_id, artist_name):
+    """Find the first and latest IDs of an album by its name and its artist ID.
     Artist name is for error output.
     """
-    albums_list = (musicbrainzngs.
-                   search_releases(query=name, arid=artist_id)["release-list"])
-    albums_list = [album for album in albums_list
-                   if name == album["title"] and "date" in album]
-    if albums_list == []:
-        raise ValueError("Album %s not literally found from artist %s" %
-                         (name, artist_name))
-    sorted(albums_list, key=lambda album: album["date"])
-    return(albums_list[0]["id"], albums_list[len(albums_list) - 1]["id"])
+    albums_list = [album for album in musicbrainzngs.
+                   search_releases(query=name, arid=artist_id)["release-list"]
+                   if album["title"] == name and "date" in album]
+    if not albums_list:
+        raise ValueError(f"Album {name} not literally found from artist"
+                         f"{artist_name}")
+    sorted(albums_list, key=lambda a: a["date"])
+    return albums_list[0]["id"], albums_list[-1]["id"]
 
 
 def custom_replace_title(title):
     """Make custom spelling replacements to the title"""
-    title = re.sub(r"-", "-", title)  # Hyphen to ASCII
-    title = re.sub(r"’", "'", title)  # Typesetting apostrophe to ASCII
-    # Rock'n'Roll, Guns'n'Roses etc.
+    title = title.replace("-", "-")  # Hyphen to ASCII
+    title = title.replace("’", "'")  # Typesetting apostrophe to ASCII
+    # Rock'n'Roll etc.
     title = re.sub(r"(\S+)( |'| ')(n|N)( |'|' )(\S+)", r"\1'n'\5", title)
     # Capitalise each word
     title.join(word.capitalize() for word in title.split())
     for keyword in ("In", "Of", "The", "To", "And", "At", "A", "An"):
-        title = re.sub(r" " + keyword, " " + keyword.lower(), title)
+        title = title.replace(f" {keyword}", f" {keyword.lower()}")
     title = re.sub(r"(.*)Part(s|)(\W*)", r"\1Pt\2.\3", title)  # Pt./Pts.
     return title
 
@@ -74,13 +71,13 @@ def custom_replace_title(title):
 def custom_replace_album(artist, album):
     """Make custom spelling replacements to the album"""
     # contains artist name already?
-    if re.match(r".*" + artist + r".*", album):
+    if artist in album:
         return album
     keywords = ("best", "classic", "collection", "definitive", "essential",
                 "greatest", "live", "hits", "singles", "ultimate")
     for keyword in keywords:
-        if re.match(r".*" + keyword + r".*", album, re.IGNORECASE):
-            return album + " (" + artist + ")"
+        if keyword in album.lower():
+            return f"{album} ({artist})"
     return album
 
 
@@ -93,8 +90,7 @@ def get_taggable_information(album_ids):
     image_dict = musicbrainzngs.get_image_list(album_ids[1])
     taggable_information = {}
 
-    taggable_information["year"] = re.sub(r"([0-9]{4})(-[0-9]{2}){2}",
-                                          r"\1",
+    taggable_information["year"] = re.sub(r"([0-9]{4})(-[0-9]{2}){2}", r"\1",
                                           album_dict["release"]["date"])
 
     discs = album_dict["release"]["medium-list"]
@@ -102,9 +98,9 @@ def get_taggable_information(album_ids):
     taggable_information["tracks"] = []
     for disc in discs:
         sorted(disc["track-list"], key=lambda song: song["position"])
-        for song in disc["track-list"]:
-            taggable_information["tracks"].append(custom_replace_title(song[
-                "recording"]["title"]))
+        taggable_information["tracks"] += \
+            [custom_replace_title(song["recording"]["title"])
+             for song in disc["track-list"]]
 
     for image in image_dict["images"]:
         if "Front" in image["types"]:
@@ -115,56 +111,49 @@ def get_taggable_information(album_ids):
 
 def get_cover_image(image_url):
     """Get and scale an image from the URL."""
-    filename = re.sub(r"(.*/)*(.*)", r"\2", image_url)
+    filename = os.path.basename(urllib.parse.urlparse(image_url).path)
     try:
         urllib.request.urlretrieve(image_url, filename)
     except PermissionError:
         raise PermissionError("Could not write image. Please execute from a "
                               "directory where you have write permissions.")
-    cover_img = Image.open(filename)
-    width, height = cover_img.size
-    scalefactor = 600/max(width, height)
-    cover_img = cover_img.resize((int(width * scalefactor),
-                                  int(height * scalefactor)))
-    os.remove(filename)
-    filename = re.sub(r"(.*)\.jpg", r"\1.png", filename)
-    cover_img.save(filename)
-    return filename
+    with PIL.Image.open(filename) as cover_img:
+        width, height = cover_img.size
+        scalefactor = 600 / max(width, height)
+        cover_img = cover_img.resize((int(width * scalefactor),
+                                      int(height * scalefactor)))
+        os.remove(filename)
+        filename = f"{os.path.splitext(filename)[0]}.png"
+        cover_img.save(filename)
+        return filename
 
 
-def tag(filename,
-        artist_name,
-        album_name,
-        release_year,
-        track_list,
-        cover_file):
+def tag(filename, artist_name, album_name,
+        release_year, track_list, cover_file):
     """Tag a file with given information, latter three arguments are from
     get_taggable_information.
     """
-    # Remove filename except number (if it exists)
-    format_extension = re.sub(r".*(\.[^\.]*)", r"\1", filename)
-    new_filename = re.sub(r"(.*)([0-9]{2})[^/]*", r"\1\2", filename)
+    no_ext_filename, format_extension = os.path.splitext(filename)
+    path, no_path_filename = os.path.split(no_ext_filename)
     try:
-        os.rename(filename, new_filename)
-    except PermissionError:
-        raise PermissionError("Could not write to directory. Please run on "
-                              "directories you have write permissions to.")
-    filename = new_filename
-    track_number = re.match(r".*([0-9]{2})", filename).group(1)
-    # List index starts at 0
-    title = track_list[int(track_number) - 1]
+        number_string = no_path_filename[0:2]
+        track_number = int(number_string)
+    except (IndexError, ValueError):
+        raise ValueError(f"{filename} does not adhere to the standard of "
+                         "starting with two numbers")
+    title = track_list[track_number - 1]
 
     if format_extension == ".ogg":
         try:
             audio = mutagen.oggvorbis.OggVorbis(filename)
         except mutagen.oggvorbis.OggVorbisHeaderError:
-            raise ValueError("%s is not an OGG Vorbis file" % (filename))
+            raise ValueError(f"{filename} is not an OGG Vorbis file")
     else:
         try:
             audio = mutagen.flac.FLAC(filename)
         except mutagen.flac.error:
-            raise ValueError("%s is not a FLAC file" % (filename))
-    audio["tracknumber"] = track_number
+            raise ValueError(f"{filename} is not a FLAC file")
+    audio["tracknumber"] = number_string
     audio["title"] = title
     audio["album"] = album_name
     audio["artist"] = artist_name
@@ -182,30 +171,34 @@ def tag(filename,
 
     try:
         audio.save()
-    except mutagen.MutagenError:
+        os.rename(filename,
+                  os.path.join(path,
+                               f"{number_string} {title}{format_extension}"))
+    except (mutagen.MutagenError, PermissionError):
         raise PermissionError("Could not write to song. Please run on songs "
                               "you have write permissions to.")
-    os.rename(filename, filename + " " + title + format_extension)
 
 
 def get_files(directory):
     """Get all relevant files and output an artist-album-filename dict"""
     if not os.path.isdir(directory):
-        raise ValueError("Directory ./" + directory + " does not exist")
+        raise ValueError(f"Directory {directory} does not exist")
     output_dict = {}
-    for root, dirs, files in os.walk(directory):
+    for root, _, files in os.walk(directory):
         for filename in files:
-            if filename.endswith(".ogg") or filename.endswith(".flac"):
-                filename = os.path.join(root, filename)
-                match = re.match(r".*/([^/]*)/([^/]*)/[^/]*", filename)
-                artist, album = match.group(1), match.group(2)
-                if artist not in output_dict:
-                    output_dict[artist] = {}
-                    output_dict[artist]["albums"] = {}
-                if album not in output_dict[artist]["albums"]:
-                    output_dict[artist]["albums"][album] = {}
-                    output_dict[artist]["albums"][album]["tracks"] = []
-                output_dict[artist]["albums"][album]["tracks"] += [filename]
+            if not (filename.endswith(".ogg") or filename.endswith(".flac")):
+                continue
+            filename = os.path.join(root, filename)
+            album, _ = os.path.split(filename)
+            prefix, album = os.path.split(album)
+            _, artist = os.path.split(prefix)
+            if artist not in output_dict:
+                output_dict[artist] = {}
+                output_dict[artist]["albums"] = {}
+            if album not in output_dict[artist]["albums"]:
+                output_dict[artist]["albums"][album] = {}
+                output_dict[artist]["albums"][album]["tracks"] = []
+            output_dict[artist]["albums"][album]["tracks"].append(filename)
     return output_dict
 
 
@@ -218,7 +211,7 @@ def main():
             files[artist]["artist_id"] = get_artist_id(artist)
             for album in files[artist]["albums"]:
                 album_name = custom_replace_album(artist, album)
-                files[artist]["albums"][album]["album_ids"] = get_album_id(
+                files[artist]["albums"][album]["album_ids"] = get_album_ids(
                     album, files[artist]["artist_id"], artist)
                 files[artist]["albums"][album]["taggable_information"] = (
                     get_taggable_information(files[artist]["albums"][album]
@@ -228,9 +221,7 @@ def main():
                                          ["taggable_information"]
                                          ["image_url"]))
                 for track in files[artist]["albums"][album]["tracks"]:
-                    tag(track,
-                        artist,
-                        album_name,
+                    tag(track, artist, album_name,
                         files[artist]["albums"][album]["taggable_information"]
                         ["year"],
                         files[artist]["albums"][album]["taggable_information"]
@@ -250,6 +241,7 @@ def main():
 # Suites like Atom Heart Mother [Father's Shout/etc.]
 # Custom album name like The Beatles -> The Beatles (White Album)
 # Auto-tag singles from the song without folder structure
+# AAC
 
 
 if __name__ == "__main__":
