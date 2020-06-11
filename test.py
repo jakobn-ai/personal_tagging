@@ -185,8 +185,8 @@ class TestTag(unittest.TestCase):
                      ["image_url"])
         imagefile = personal_tagging.get_cover_image(image_url)
         filename = "01.ogg"
-        shutil.copyfile("testlibrary/testartist/testalbum/testfile.ogg",
-                        filename)
+        shutil.copyfile(os.path.join("testlibrary", "testartist", "testalbum",
+                                     "testfile.ogg"), filename)
         original_perms = os.stat(".").st_mode
         # Revoke write permissions on directory
         os.chmod(".", original_perms & ~stat.S_IWUSR)
