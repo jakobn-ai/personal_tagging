@@ -193,6 +193,10 @@ def get_cover_image(image_url):
         return filename
 
 
+def remove_forbidden_characters(title):
+    return re.sub(r"(<|>|:|\"|/|\\|\||\?|\*)", "-", title)
+
+
 def tag(filename, artist_name, album_name,
         release_year, track_list, cover_file):
     """Tag a file with given information, latter three arguments are from
@@ -234,6 +238,7 @@ def tag(filename, artist_name, album_name,
     vcomment_value = encoded_data.decode("ascii")
     audio["metadata_block_picture"] = [vcomment_value]
 
+    title = remove_forbidden_characters(title)
     try:
         audio.save()
         os.rename(filename,
