@@ -88,6 +88,44 @@ class TestGetAlbumIDs(unittest.TestCase):
                                            "Led Zeppelin")
 
 
+class TestGetNumber(unittest.TestCase):
+    """Test get_number"""
+
+    def test_normal_input(self):
+        """Tests with normal input"""
+        self.assertEqual(personal_tagging.get_number("Four"), "4")
+        self.assertEqual(personal_tagging.get_number("five"), "5")
+        self.assertEqual(personal_tagging.get_number("VII"), "7")
+        self.assertEqual(personal_tagging.get_number("Nothing"), "Nothing")
+
+
+class TestCustomReplaceTitle(unittest.TestCase):
+    """Test custom_replace_title"""
+
+    def test_normal_input(self):
+        """Tests with normal input"""
+        test = ("Song’s “name”, Part One / rock 'n Roll, Pts. Two – five / "
+                "Name Of The song, Pts. VI and vii")
+        expected = ("Song's \"Name\", Pt. 1/Rock'n'Roll, Pts. 2-5/"
+                    "Name of the Song, Pts. 6 & 7")
+        self.assertEqual(personal_tagging.custom_replace_title(test), expected)
+
+
+class TestCustomReplaceAlbum(unittest.TestCase):
+    """Test custom_replace_album"""
+
+    def test_normal_input(self):
+        """Tests with normal input"""
+        self.assertEqual(personal_tagging.
+                         custom_replace_album("Led Zeppelin",
+                                              "Greatest Hits"),
+                         "Greatest Hits (Led Zeppelin)")
+        self.assertEqual(personal_tagging.
+                         custom_replace_album("Led Zeppelin",
+                                              "Physical Graffiti"),
+                         "Physical Graffiti")
+
+
 class TestGetTaggableInformation(unittest.TestCase):
     """Tests get_taggable_information"""
 

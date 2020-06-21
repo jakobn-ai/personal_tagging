@@ -51,23 +51,83 @@ def get_album_ids(name, artist_id, artist_name):
                            album["title"])).lower() == name.lower()
                    and "date" in album and album["date"]]
     if not albums_list:
-        raise ValueError(f"Album {name} not literally found from artist"
+        raise ValueError(f"Album {name} not literally found by artist "
                          f"{artist_name}")
-    sorted(albums_list, key=lambda a: a["date"])
-    return albums_list[0]["id"], albums_list[-1]["id"]
+    albums_list = sorted(albums_list, key=lambda a: a["date"])
+    use_for_cover = None
+    for album in reversed(albums_list):
+        try:
+            musicbrainzngs.get_image_list(album["id"])
+            use_for_cover = album
+            break
+        except musicbrainzngs.musicbrainz.ResponseError:
+            continue
+    if use_for_cover is None:
+        raise ValueError(f"No cover art available for {name} by "
+                         f"{artist_name}, this is unsupported behaviour")
+    else:
+        return albums_list[0]["id"], use_for_cover["id"]
+
+
+def get_number(string):
+    number = string.lower()
+    number_strings = ("zero", "one", "two", "three", "four", "five", "six",
+                      "seven", "eight", "nine", "ten", "eleven", "twelve")
+    roman_strings = ("i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix",
+                     "x", "xi", "xii")
+    english_numbers = {word: str(number)
+                       for number, word in enumerate(number_strings)}
+    roman_numbers = {roman: str(number)
+                     for number, roman in enumerate(roman_strings, start=1)}
+    if number in english_numbers:
+        number = english_numbers[number]
+    elif number in roman_numbers:
+        number = roman_numbers[number]
+    else:
+        number = string
+    return number
 
 
 def custom_replace_title(title):
     """Make custom spelling replacements to the title"""
-    title = title.replace("-", "-")  # Hyphen to ASCII
-    title = title.replace("’", "'")  # Typesetting apostrophe to ASCII
+    for utf8s, latin1 in ((("–", "—", "―", "‒", "‐", "‑", "⁃"), "-"),
+                          (("‘", "’", "‚", "›", "‹", "′", "‵", "ʹ", "’"), "'"),
+                          (("“", "”", "„", "»", "«", "″", "‶", "ʺ"), '"'),
+                          (("…", "..."))):
+        regex = r"("
+        for utf8 in utf8s[:-1]:
+            regex += rf"{utf8}|"
+        regex += rf"{utf8s[-1]})"
+        title = re.sub(regex, latin1, title)
+    # Medley Song 1/Medley Song 2
+    title = title.replace(" / ", "/")
     # Rock'n'Roll etc.
     title = re.sub(r"(\S+)( |'| ')(n|N)( |'|' )(\S+)", r"\1'n'\5", title)
+
     # Capitalise each word
-    title.join(word.capitalize() for word in title.split())
+    for char in (" ", "-", "(", '"', "/"):
+        matches = re.finditer(rf"\{char}([A-Za-z]*)", title)
+        for match in matches:
+            title = title.replace(match.group(0),
+                                  f"{char}{match.group(1).capitalize()}")
+    # but write these lowercase
     for keyword in ("In", "Of", "The", "To", "And", "At", "A", "An"):
-        title = title.replace(f" {keyword}", f" {keyword.lower()}")
-    title = re.sub(r"(.*)Part(s|)(\W*)", r"\1Pt\2.\3", title)  # Pt./Pts.
+        title = re.sub(rf"([^.:-] ){keyword}( |$)", rf"\1{keyword.lower()}\2",
+                       title)
+
+    # Pt./Pts.
+    matches = re.finditer(r"P(ar)?t(s?)\.? ([A-Za-z0-9]*)"
+                          r"( ?(-|&|and) ?([A-Za-z0-9]*))?", title)
+    for match in matches:
+        replacement = f"Pt{match.group(2)}. {get_number(match.group(3))}"
+        if match.group(4) is not None:
+            if match.group(5) == "-":
+                replacement += "-"
+            else:
+                replacement += " & "
+            replacement += get_number(match.group(6))
+        title = title.replace(match.group(0), replacement)
+
     return title
 
 
