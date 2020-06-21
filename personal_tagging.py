@@ -157,13 +157,15 @@ def get_taggable_information(album_ids):
                                           album_dict["release"]["date"])
 
     discs = album_dict["release"]["medium-list"]
-    sorted(discs, key=lambda disc: disc["position"])
     taggable_information["tracks"] = []
-    for disc in discs:
-        sorted(disc["track-list"], key=lambda song: song["position"])
-        taggable_information["tracks"] += \
-            [custom_replace_title(song["recording"]["title"])
-             for song in disc["track-list"]]
+    for disc in sorted(discs, key=lambda disc: int(disc["position"])):
+        for song in sorted(disc["track-list"],
+                           key=lambda song: int(song["position"])):
+            if "title" in song:
+                title = song["title"]
+            else:
+                title = song["recording"]["title"]
+            taggable_information["tracks"].append(custom_replace_title(title))
 
     for image in image_dict["images"]:
         if "Front" in image["types"]:
