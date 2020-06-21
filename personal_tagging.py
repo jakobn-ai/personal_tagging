@@ -34,8 +34,9 @@ def setup():
 def get_artist_id(name):
     """Find the ID of an artist by their name."""
     try:
-        return next(filter(lambda a: a["name"] == name, musicbrainzngs.
-                           search_artists(name)["artist-list"]))["id"]
+        return next(filter(lambda a: a["name"].lower() == name.lower(),
+                           musicbrainzngs.search_artists(name)
+                           ["artist-list"]))["id"]
     except StopIteration:
         raise ValueError(f"Artist {name} not literally found")
 
@@ -46,7 +47,9 @@ def get_album_ids(name, artist_id, artist_name):
     """
     albums_list = [album for album in musicbrainzngs.
                    search_releases(query=name, arid=artist_id)["release-list"]
-                   if album["title"] == name and "date" in album]
+                   if remove_forbidden_characters(custom_replace_title(
+                           album["title"])).lower() == name.lower()
+                   and "date" in album and album["date"]]
     if not albums_list:
         raise ValueError(f"Album {name} not literally found from artist"
                          f"{artist_name}")
