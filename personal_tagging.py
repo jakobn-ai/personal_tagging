@@ -269,6 +269,9 @@ def get_files(directory):
                 output_dict[artist]["albums"][album] = {}
                 output_dict[artist]["albums"][album]["tracks"] = []
             output_dict[artist]["albums"][album]["tracks"].append(filename)
+    if not output_dict:
+        raise ValueError("Please run on artist-album tree including OGG "
+                         "Vorbis or FLAC files")
     return output_dict
 
 
@@ -303,15 +306,15 @@ def main():
 
 
 # TODO Target features
-# Test case that better represents features (like a Greatest Hits album)
-# Catch unexpected title
+# Only ask for image once, function without available image
+# improve image  & release heuristic
+# AAC
 # "Expanded" albums (personal bonus tracks)
 # OST, Podcast/audiobook, classical music
 # Track & album information like live recording, feature
 # Suites like Atom Heart Mother [Father's Shout/etc.]
 # Custom album name like The Beatles -> The Beatles (White Album)
 # Auto-tag singles from the song without folder structure
-# AAC
 
 
 if __name__ == "__main__":
