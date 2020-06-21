@@ -8,12 +8,28 @@ import shutil
 import stat
 import unittest
 
-import musicbrainzngs
 import mutagen
 import PIL.Image
 
 import personal_tagging
-import aux_information
+
+
+led_zeppelin = "678d88b2-87b0-403b-b63d-5da7465aecc3"
+physical_graffiti_possible = ("e3f0f405-d50f-45a4-ba71-795e7333fb56",
+                              "0d06025c-afff-49fd-a1db-8005e686e4d9")
+physical_graffiti = physical_graffiti_possible[0]
+physical_graffiti_cover = "052dfa98-047d-43c2-bb46-bfadde0765f8"
+rolling_stones = "b071f9fa-14b0-4217-8e97-eb41da73f598"
+let_it_bleed = "15d6b4ef-8517-348e-a50f-e3e2417f009b"
+let_it_bleed_cover = "abd6d55d-7cc5-4794-bedb-0ccb636c26c2"
+tracklist = ["Custard Pie", "The Rover", "In My Time of Dying",
+             "Houses of the Holy", "Trampled Under Foot", "Kashmir",
+             "In the Light", "Bron-Yr-Aur", "Down By the Seaside",
+             "Ten Years Gone", "Night Flight", "The Wanton Song",
+             "Boogie With Stu", "Black Country Woman", "Sick Again"]
+url = ("http://coverartarchive.org/release/"
+       "052dfa98-047d-43c2-bb46-bfadde0765f8/8739384867.jpg")
+expected_information = {"year": "1975", "tracks": tracklist, "image_url": url}
 
 
 class TestGetArtistID(unittest.TestCase):
@@ -22,47 +38,44 @@ class TestGetArtistID(unittest.TestCase):
     def test_normal_input(self):
         """Test with normal input"""
         personal_tagging.setup()
-        test_id = personal_tagging.get_artist_id("MusicBrainz Test Artist")
-        self.assertEqual(test_id, "7e84f845-ac16-41fe-9ff8-df12eb32af55")
+        test_id = personal_tagging.get_artist_id("Led Zeppelin")
+        self.assertEqual(test_id, led_zeppelin)
 
     def test_sanity(self):
         """Sanity check: Does it yield different IDs for different queries?"""
         personal_tagging.setup()
-        test_id = personal_tagging.get_artist_id("The Beatles")
-        self.assertNotEqual(test_id, "7e84f845-ac16-41fe-9ff8-df12eb32af55")
+        test_id = personal_tagging.get_artist_id("The Rolling Stones")
+        self.assertNotEqual(test_id, led_zeppelin)
 
     def test_value_error(self):
         """Test value error: Find an artist that does not exist"""
         personal_tagging.setup()
         with self.assertRaises(ValueError):
             personal_tagging.get_artist_id("I cannot think of a query where "
-                                           "I can be certain such a band will "
-                                           "never exist but I think this does "
-                                           "the job")
+                                           "I can be certain such an artist "
+                                           "will never exist but I think this "
+                                           "does the job")
 
 
 class TestGetAlbumIDs(unittest.TestCase):
-    """Test get_album_ids"""
+    """Tests get_album_ids"""
 
     def test_normal_input(self):
         """Test with normal input"""
         personal_tagging.setup()
-        test_id = personal_tagging.get_album_ids("Pregap and Data Tracks",
-                                                 "7e84f845-ac16-41fe-9ff8-"
-                                                 "df12eb32af55",
-                                                 "MusicBrainz Test Artist")
-        expected_string = "06c015bb-b3bb-4904-a339-e2b55ea3d6bf"
-        self.assertEqual(test_id, (expected_string, expected_string))
+        test_ids = personal_tagging.get_album_ids("Physical Graffiti",
+                                                  led_zeppelin, "Led Zeppelin")
+        # release used for cover may change in the future
+        self.assertIn(test_ids[0], physical_graffiti_possible)
 
     def test_sanity(self):
         """Sanity check: Does it yield different IDs for different queries?"""
         personal_tagging.setup()
-        test_id = personal_tagging.get_album_ids("The Beatles",
-                                                 "b10bbbfc-cf9e-42e0-be17-"
-                                                 "e2c3e1d2600d",
-                                                 "The Beatles")
-        expected_string = "06c015bb-b3bb-4904-a339-e2b55ea3d6bf"
-        self.assertNotEqual(test_id, (expected_string, expected_string))
+        test_ids = personal_tagging.get_album_ids("Let It Bleed",
+                                                  rolling_stones,
+                                                  "The Rolling Stones")
+        for test_id in test_ids:
+            self.assertNotIn(test_id, physical_graffiti_possible)
 
     def test_value_error(self):
         """Test value error: Find an album that does not exist"""
@@ -71,10 +84,8 @@ class TestGetAlbumIDs(unittest.TestCase):
             personal_tagging.get_album_ids("I cannot think of a query where "
                                            "I can be certain such an album "
                                            "will never exist but I think this "
-                                           "does the job",
-                                           "7e84f845-ac16-41fe-9ff8-"
-                                           "df12eb32af55",
-                                           "MusicBrainz Test Artist")
+                                           "does the job", led_zeppelin,
+                                           "Led Zeppelin")
 
 
 class TestGetTaggableInformation(unittest.TestCase):
@@ -83,32 +94,19 @@ class TestGetTaggableInformation(unittest.TestCase):
     def test_normal_input(self):
         """Tests with normal input"""
         self.maxDiff = None
-
         personal_tagging.setup()
-        query_id = "3fca59cc-a22f-4a57-8d69-05bf33595ca6"
-        taggable_information = (personal_tagging.
-                                get_taggable_information((query_id, query_id)))
-        self.assertEqual(aux_information.expected_information,
-                         taggable_information)
+        taggable_information = personal_tagging.get_taggable_information(
+            (physical_graffiti, physical_graffiti_cover))
+        self.assertEqual(expected_information, taggable_information)
 
     def test_sanity(self):
         """Sanity check: Does it yield different information for different
         queries?
         """
         personal_tagging.setup()
-        # Please Please Me because MusicBrainz Test Artist has no cover
-        query_id = "ade577f6-6087-4a4f-8e87-38b0f8169814"
-        taggable_information = (personal_tagging.
-                                get_taggable_information((query_id, query_id)))
-        self.assertNotEqual(aux_information.expected_information,
-                            taggable_information)
-
-    def test_404(self):
-        """Tests 404 upon searching the image for an album without a cover"""
-        personal_tagging.setup()
-        query_id = "06c015bb-b3bb-4904-a339-e2b55ea3d6bf"
-        with self.assertRaises(musicbrainzngs.musicbrainz.ResponseError):
-            personal_tagging.get_taggable_information((query_id, query_id))
+        taggable_information = personal_tagging.get_taggable_information(
+            (let_it_bleed, let_it_bleed_cover))
+        self.assertNotEqual(expected_information, taggable_information)
 
 
 class TestGetCoverImage(unittest.TestCase):
@@ -117,10 +115,8 @@ class TestGetCoverImage(unittest.TestCase):
     def test_normal_input(self):
         """Tests with normal input"""
         personal_tagging.setup()
-        query_id = "3fca59cc-a22f-4a57-8d69-05bf33595ca6"
-        image_url = (personal_tagging.
-                     get_taggable_information((query_id, query_id))
-                     ["image_url"])
+        image_url = personal_tagging.get_taggable_information(
+            (physical_graffiti, physical_graffiti_cover))["image_url"]
         imagefile = personal_tagging.get_cover_image(image_url)
         with PIL.Image.open(imagefile) as img:
             self.assertEqual(max(img.size), 600)
@@ -133,13 +129,21 @@ class TestGetCoverImage(unittest.TestCase):
         original_perms = os.stat(".").st_mode
         # Revoke write permissions
         os.chmod(".", original_perms & ~stat.S_IWUSR)
-        query_id = "3fca59cc-a22f-4a57-8d69-05bf33595ca6"
-        image_url = (personal_tagging.
-                     get_taggable_information((query_id, query_id))
-                     ["image_url"])
+        image_url = personal_tagging.get_taggable_information(
+            (physical_graffiti, physical_graffiti_cover))["image_url"]
         with self.assertRaises(PermissionError):
             personal_tagging.get_cover_image(image_url)
         os.chmod(".", original_perms)
+
+
+class TestRemoveForbiddenCharacters(unittest.TestCase):
+    """Tests remove_forbidden_characters"""
+
+    def test_normal_input(self):
+        """Tests with normal input"""
+        self.assertEqual(personal_tagging.
+                         remove_forbidden_characters('<>:"/\\|?*'),
+                         "---------")
 
 
 class TestTag(unittest.TestCase):
@@ -148,41 +152,30 @@ class TestTag(unittest.TestCase):
     def test_normal_input(self):
         """Tests with normal input"""
         personal_tagging.setup()
-        query_id = "3fca59cc-a22f-4a57-8d69-05bf33595ca6"
-        image_url = (personal_tagging.
-                     get_taggable_information((query_id, query_id))
-                     ["image_url"])
+        image_url = personal_tagging.get_taggable_information(
+            (physical_graffiti, physical_graffiti_cover))["image_url"]
         imagefile = personal_tagging.get_cover_image(image_url)
         for extension in ("ogg", "flac"):
-            filename = "01 Back in the U.S.S.R.." + extension
+            filename = "01 Custard Pie." + extension
             shutil.copyfile(os.path.join("testlibrary", "testartist",
                                          "testalbum", f"testfile.{extension}"),
-                                         filename)
-            personal_tagging.tag(filename,
-                                 "The Beatles",
-                                 "The Beatles",
-                                 aux_information.expected_information["year"],
-                                 aux_information.expected_information["tra"
-                                                                      "cks"],
-                                 imagefile)
+                            filename)
+            personal_tagging.tag(filename, "Led Zeppelin", "Physical Graffiti",
+                                 "1975", tracklist, imagefile)
             tags_dict = mutagen.File(filename)
-            self.assertEqual(tags_dict["artist"][0], "The Beatles")
-            self.assertEqual(tags_dict["album"][0], "The Beatles")
+            self.assertEqual(tags_dict["artist"][0], "Led Zeppelin")
+            self.assertEqual(tags_dict["album"][0], "Physical Graffiti")
             self.assertEqual(tags_dict["tracknumber"][0], "01")
-            self.assertEqual(tags_dict["title"][0], "Back in the U.S.S.R.")
-            self.assertEqual(tags_dict["date"][0], "2000")
-            self.assertEqual(tags_dict["metadata_block_picture"][0],
-                             aux_information.cover_data)
+            self.assertEqual(tags_dict["title"][0], "Custard Pie")
+            self.assertEqual(tags_dict["date"][0], "1975")
             os.remove(filename)
         os.remove(imagefile)
 
     def test_permission_errors(self):
         """Tests with missing write access"""
         personal_tagging.setup()
-        query_id = "3fca59cc-a22f-4a57-8d69-05bf33595ca6"
-        image_url = (personal_tagging.
-                     get_taggable_information((query_id, query_id))
-                     ["image_url"])
+        image_url = personal_tagging.get_taggable_information(
+            (physical_graffiti, physical_graffiti_cover))["image_url"]
         imagefile = personal_tagging.get_cover_image(image_url)
         filename = "01.ogg"
         shutil.copyfile(os.path.join("testlibrary", "testartist", "testalbum",
@@ -191,26 +184,16 @@ class TestTag(unittest.TestCase):
         # Revoke write permissions on directory
         os.chmod(".", original_perms & ~stat.S_IWUSR)
         with self.assertRaises(PermissionError):
-            personal_tagging.tag(filename,
-                                 "The Beatles",
-                                 "The Beatles",
-                                 aux_information.expected_information["year"],
-                                 aux_information.expected_information["tra"
-                                                                      "cks"],
-                                 imagefile)
+            personal_tagging.tag(filename, "Led Zeppelin", "Physical Graffiti",
+                                 "1975", tracklist, imagefile)
         os.chmod(".", original_perms)
 
         original_perms = os.stat(filename).st_mode
         # Revoke write permissions on song
         os.chmod(filename, os.stat(filename).st_mode & ~stat.S_IWUSR)
         with self.assertRaises(PermissionError):
-            personal_tagging.tag(filename,
-                                 "The Beatles",
-                                 "The Beatles",
-                                 aux_information.expected_information["year"],
-                                 aux_information.expected_information["tra"
-                                                                      "cks"],
-                                 imagefile)
+            personal_tagging.tag(filename, "Led Zeppelin", "Physical Graffiti",
+                                 "1975", tracklist, imagefile)
         os.chmod(filename, original_perms)
 
         os.remove(filename)
@@ -219,22 +202,15 @@ class TestTag(unittest.TestCase):
     def test_not_given_format(self):
         """Tests with files that aren't the given format"""
         personal_tagging.setup()
-        query_id = "3fca59cc-a22f-4a57-8d69-05bf33595ca6"
-        image_url = (personal_tagging.
-                     get_taggable_information((query_id, query_id))
-                     ["image_url"])
+        image_url = personal_tagging.get_taggable_information(
+            (physical_graffiti, physical_graffiti_cover))["image_url"]
         imagefile = personal_tagging.get_cover_image(image_url)
         for extension in (".ogg", ".flac"):
             filename = "01" + extension
             open(filename, "w").close()
             with self.assertRaises(ValueError):
-                personal_tagging.tag(filename,
-                                     "The Beatles",
-                                     "The Beatles",
-                                     aux_information.
-                                     expected_information["year"],
-                                     aux_information.
-                                     expected_information["tracks"],
+                personal_tagging.tag(filename, "Led Zeppelin",
+                                     "Physical Graffiti", "1975", tracklist,
                                      imagefile)
             os.remove(filename)
         os.remove(imagefile)
@@ -249,10 +225,11 @@ class TestGetFiles(unittest.TestCase):
         self.assertEqual(list(files_dict), ["testartist"])
         self.assertEqual(list(files_dict["testartist"]["albums"]),
                          ["testalbum"])
+        files = [os.path.join("testlibrary", "testartist", "testalbum",
+                              f"testfile.{extension}")
+                 for extension in ("flac", "ogg")]
         self.assertEqual(sorted(files_dict["testartist"]["albums"]["testalbum"]
-                         ["tracks"]),
-                         ["testlibrary/testartist/testalbum/testfile.flac",
-                          "testlibrary/testartist/testalbum/testfile.ogg"])
+                                ["tracks"]), files)
 
     def test_missing_dir(self):
         """Tests with a directory that doesn't exist"""
@@ -260,5 +237,5 @@ class TestGetFiles(unittest.TestCase):
             personal_tagging.get_files("library")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
