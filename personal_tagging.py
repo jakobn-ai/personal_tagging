@@ -194,7 +194,7 @@ def get_cover_image(image_url):
 
 
 def remove_forbidden_characters(title):
-    return re.sub(r"(<|>|:|\"|/|\\|\||\?|\*)", "-", title)
+    return re.sub(r"[<>:/\"\\|?*]", "-", title)
 
 
 def tag(filename, artist_name, album_name,
@@ -308,6 +308,7 @@ def main():
 # TODO Target features
 # Only ask for image once, function without available image
 # improve image  & release heuristic
+# (esp. don't use pre-album single of the same name)
 # AAC
 # "Expanded" albums (personal bonus tracks)
 # OST, Podcast/audiobook, classical music
