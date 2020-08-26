@@ -306,6 +306,8 @@ def main():
 
 
 # TODO Target features
+# Front cover
+# [including]
 # Only ask for image once, function without available image
 # improve image  & release heuristic
 # (esp. don't use pre-album single of the same name)
