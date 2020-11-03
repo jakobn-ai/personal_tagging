@@ -233,6 +233,8 @@ def tag(filename, artist_name, album_name,
         data = cover.read()
     picture = mutagen.flac.Picture()
     picture.data = data
+    picture.type = mutagen.id3.PictureType.COVER_FRONT
+    picture.mime = "image/png"
     picture_data = picture.write()
     encoded_data = base64.b64encode(picture_data)
     vcomment_value = encoded_data.decode("ascii")
@@ -306,7 +308,6 @@ def main():
 
 
 # TODO Target features
-# Front cover
 # [including]
 # Only ask for image once, function without available image
 # improve image  & release heuristic
